@@ -15,15 +15,12 @@
         button:hover { background-color: #1a365d; }
         button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 
-        /* 보기 버튼 */
         .option-btn { background-color: white; color: #2d3748; border: 2px solid #e2e8f0; margin-bottom: 10px; text-align: left; }
         .option-btn:hover { background-color: #edf2f7; border-color: #cbd5e0; }
 
-        /* 상태 표시 */
         .progress { text-align: right; font-weight: bold; color: #718096; margin-bottom: 20px; }
         .question { font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 30px; color: #2b6cb0; }
         
-        /* 오답 노트 디자인 */
         .wrong-list { margin-top: 20px; text-align: left; background: #fff5f5; padding: 20px; border-radius: 10px; border: 1px solid #feb2b2; }
         .wrong-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #feb2b2; }
         .wrong-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
@@ -50,16 +47,16 @@
 
         <label><b>🎯 시험 범위 선택</b></label>
         <select id="range-select">
-            <option value="all">전체 풀기 (1번 ~ 끝까지)</option>
-            <option value="1-45">앞부분 절반 (1번 ~ 45번)</option>
-            <option value="46-90">뒷부분 절반 (46번 ~ 90번)</option>
+            <option value="all">전체 풀기</option>
+            <option value="half1">앞부분 절반 풀기</option>
+            <option value="half2">뒷부분 절반 풀기</option>
         </select>
 
         <button id="start-btn" onclick="startTest()">시험 시작하기</button>
     </div>
 
     <div id="quiz-screen" class="hidden">
-        <div class="progress" id="progress-text">1 / 45</div>
+        <div class="progress" id="progress-text">1 / ?</div>
         <div class="question" id="question-text">한국어 뜻</div>
         <div id="options-area"></div>
     </div>
@@ -85,7 +82,7 @@
     let currentQuizData = [];
     let currentIndex = 0;
     let score = 0;
-    let wrongAnswers = []; // 🌟 틀린 문제를 모아둘 공간 추가!
+    let wrongAnswers = []; 
     let studentName = "";
     let selectedDay = "";
     let selectedRange = "";
@@ -124,12 +121,15 @@
 
         let dayWords = allVocaData.filter(item => item.day === selectedDay);
         
-        if (rangeVal === '1-45') {
-            currentQuizData = dayWords.filter(item => item.num >= 1 && item.num <= 45);
-            selectedRange = "1~45번";
-        } else if (rangeVal === '46-90') {
-            currentQuizData = dayWords.filter(item => item.num >= 46 && item.num <= 90);
-            selectedRange = "46~90번";
+        // 🌟 마법의 구간: 단어 개수가 몇 개든 알아서 절반으로 쪼갭니다!
+        let midPoint = Math.ceil(dayWords.length / 2); // 정확히 가운데 번호 계산
+
+        if (rangeVal === 'half1') {
+            currentQuizData = dayWords.slice(0, midPoint); // 처음부터 가운데까지
+            selectedRange = "앞부분 절반";
+        } else if (rangeVal === 'half2') {
+            currentQuizData = dayWords.slice(midPoint); // 가운데부터 끝까지
+            selectedRange = "뒷부분 절반";
         } else {
             currentQuizData = dayWords;
             selectedRange = "전체";
@@ -145,7 +145,7 @@
         
         currentIndex = 0;
         score = 0;
-        wrongAnswers = []; // 초기화
+        wrongAnswers = []; 
         renderQuiz();
     }
 
@@ -178,19 +178,16 @@
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.innerText = opt.text;
-                // 🌟 클릭하면 바로 넘어가도록 수정됨!
                 btn.onclick = () => checkAnswer(opt.isCorrect, opt.text, q.question, q.answer);
                 optionsArea.appendChild(btn);
             }
         });
     }
 
-    // 🌟 실전 모드: 클릭 즉시 오답만 몰래 기록하고 바로 다음으로 넘어감
     function checkAnswer(isCorrect, pickedText, questionText, correctAnswerText) {
         if(isCorrect) {
             score++;
         } else {
-            // 틀렸을 경우 오답 노트에 저장
             wrongAnswers.push({
                 question: questionText,
                 correct: correctAnswerText,
@@ -200,21 +197,19 @@
 
         currentIndex++;
         if(currentIndex < currentQuizData.length) {
-            renderQuiz(); // 다음 문제 바로 출제 (딜레이 없음!)
+            renderQuiz(); 
         } else {
-            endTest(); // 다 풀면 결과 화면으로
+            endTest(); 
         }
     }
 
-   function endTest() {
+    function endTest() {
         document.getElementById('quiz-screen').classList.add('hidden');
         document.getElementById('result-screen').classList.remove('hidden');
         
-        // 🌟 100점 만점 환산을 없애고 '맞은 개수 / 전체 개수'로 직관적으로 변경!
         const finalScoreText = `${score} / ${currentQuizData.length}`;
         document.getElementById('score-text').innerText = finalScoreText;
 
-        // 오답 노트 화면에 뿌려주기
         const wrongContainer = document.getElementById('wrong-answers-container');
         const wrongList = document.getElementById('wrong-answers-list');
         wrongList.innerHTML = "";
@@ -234,7 +229,6 @@
             wrongContainer.classList.add('hidden');
         }
 
-        // 🌟 구글 시트에도 '40 / 45' 형태로 전송됩니다!
         const formData = `action=saveScore&studentName=${encodeURIComponent(studentName)}&subjectDay=${encodeURIComponent(subjectType + " Day " + selectedDay)}&range=${encodeURIComponent(selectedRange)}&score=${encodeURIComponent(finalScoreText)}`;
 
         fetch(scriptURL, {
