@@ -61,7 +61,18 @@
 
         <div id="step1">
             <h2>대성 SKY 학습 사이트</h2>
-            <p>학습할 학년을 선택해 주세요.</p>
+            
+            <div style="background-color: #edf2f7; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+                <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 15px;">📚 단어 연습</h3>
+                <div class="btn-group">
+                    <button onclick="location.href='voca.html?type=toefl'" style="background-color: #dd6b20;">TOEFL 단어</button>
+                    <button onclick="location.href='voca.html?type=toeic'" style="background-color: #3182ce;">TOEIC 단어</button>
+                </div>
+            </div>
+
+            <hr style="border: 1px dashed #cbd5e0; margin-bottom: 25px;">
+
+            <p>📝 내신/모의고사 문제 풀이 (학년 선택)</p>
             <div class="btn-group" id="grade-btns">
                 <p style="grid-column: span 2;">데이터를 불러오는 중입니다... ⏳</p>
             </div>

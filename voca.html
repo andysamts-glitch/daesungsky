@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프리미엄 단어 테스트</title>
+    <style>
+        body { margin: 0; font-family: 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; }
+        .container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #1a365d; text-align: center; }
+        
+        input[type="text"], select { width: 100%; padding: 15px; font-size: 16px; margin: 10px 0 20px 0; border: 2px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; }
+        
+        button { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background-color: #2b6cb0; color: white; border: none; border-radius: 10px; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #1a365d; }
+        button:disabled { background-color: #a0aec0; cursor: not-allowed; }
+
+        /* 보기 버튼 */
+        .option-btn { background-color: white; color: #2d3748; border: 2px solid #e2e8f0; margin-bottom: 10px; text-align: left; }
+        .option-btn:hover { background-color: #edf2f7; border-color: #cbd5e0; }
+
+        /* 상태 표시 */
+        .progress { text-align: right; font-weight: bold; color: #718096; margin-bottom: 20px; }
+        .question { font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 30px; color: #2b6cb0; }
+        
+        /* 오답 노트 디자인 */
+        .wrong-list { margin-top: 20px; text-align: left; background: #fff5f5; padding: 20px; border-radius: 10px; border: 1px solid #feb2b2; }
+        .wrong-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #feb2b2; }
+        .wrong-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .w-question { font-weight: bold; font-size: 18px; color: #c53030; }
+        .w-answer { color: #2f855a; font-weight: bold; }
+        .w-picked { color: #718096; text-decoration: line-through; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="intro-screen">
+        <h1 id="title-text">단어 테스트 준비</h1>
+        
+        <label><b>🙋‍♂️ 학생 이름</b></label>
+        <input type="text" id="student-name" placeholder="이름을 입력하세요 (예: 홍길동)">
+
+        <label><b>📅 학습할 Day 선택</b></label>
+        <select id="day-select">
+            <option value="">데이터를 불러오는 중입니다...</option>
+        </select>
+
+        <label><b>🎯 시험 범위 선택</b></label>
+        <select id="range-select">
+            <option value="all">전체 풀기 (1번 ~ 끝까지)</option>
+            <option value="1-45">앞부분 절반 (1번 ~ 45번)</option>
+            <option value="46-90">뒷부분 절반 (46번 ~ 90번)</option>
+        </select>
+
+        <button id="start-btn" onclick="startTest()">시험 시작하기</button>
+    </div>
+
+    <div id="quiz-screen" class="hidden">
+        <div class="progress" id="progress-text">1 / 45</div>
+        <div class="question" id="question-text">한국어 뜻</div>
+        <div id="options-area"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <h2>시험 종료! 🎉</h2>
+        <h1 id="score-text" style="font-size: 40px; color: #e53e3e; margin: 10px 0;">0점</h1>
+        <p id="saving-msg" style="color: #3182ce; font-weight: bold;">성적을 서버에 전송하고 있습니다... ⏳</p>
+        
+        <div id="wrong-answers-container" class="wrong-list hidden">
+            <h3 style="margin-top: 0; color: #c53030;">📝 틀린 단어 복습하기</h3>
+            <div id="wrong-answers-list"></div>
+        </div>
+
+        <button onclick="location.href='index.html'" style="margin-top: 20px;">첫 화면으로 돌아가기</button>
+    </div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzxJ085RNS9FsBUGAjwtVJsAswTqT7ZzV4qy5-mPjygedrWAY634Nq6eDt7XZYo4fYxIA/exec';
+    
+    let allVocaData = [];
+    let currentQuizData = [];
+    let currentIndex = 0;
+    let score = 0;
+    let wrongAnswers = []; // 🌟 틀린 문제를 모아둘 공간 추가!
+    let studentName = "";
+    let selectedDay = "";
+    let selectedRange = "";
+    let subjectType = "";
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        subjectType = urlParams.get('type') === 'toeic' ? '토익' : '토플';
+        document.getElementById('title-text').innerText = `${subjectType} 단어 테스트`;
+
+        fetch(`${scriptURL}?action=getVoca&t=${new Date().getTime()}`)
+        .then(res => res.json())
+        .then(data => {
+            allVocaData = data.filter(item => item.subject === subjectType);
+            
+            let days = [...new Set(allVocaData.map(item => item.day))].sort((a,b) => a-b);
+            let daySelect = document.getElementById('day-select');
+            daySelect.innerHTML = "";
+            days.forEach(d => {
+                daySelect.innerHTML += `<option value="${d}">Day ${d}</option>`;
+            });
+
+            if(days.length === 0) {
+                daySelect.innerHTML = "<option>등록된 단어가 없습니다.</option>";
+                document.getElementById('start-btn').disabled = true;
+            }
+        });
+    };
+
+    function startTest() {
+        studentName = document.getElementById('student-name').value.trim();
+        selectedDay = document.getElementById('day-select').value;
+        const rangeVal = document.getElementById('range-select').value;
+
+        if(!studentName) { alert("학생 이름을 입력해 주세요!"); return; }
+
+        let dayWords = allVocaData.filter(item => item.day === selectedDay);
+        
+        if (rangeVal === '1-45') {
+            currentQuizData = dayWords.filter(item => item.num >= 1 && item.num <= 45);
+            selectedRange = "1~45번";
+        } else if (rangeVal === '46-90') {
+            currentQuizData = dayWords.filter(item => item.num >= 46 && item.num <= 90);
+            selectedRange = "46~90번";
+        } else {
+            currentQuizData = dayWords;
+            selectedRange = "전체";
+        }
+
+        if(currentQuizData.length === 0) {
+            alert("선택한 범위에 단어가 없습니다.");
+            return;
+        }
+
+        document.getElementById('intro-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        
+        currentIndex = 0;
+        score = 0;
+        wrongAnswers = []; // 초기화
+        renderQuiz();
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function renderQuiz() {
+        const q = currentQuizData[currentIndex];
+        document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${currentQuizData.length}`;
+        document.getElementById('question-text').innerText = q.question; 
+
+        let options = [
+            { text: q.answer, isCorrect: true },
+            { text: q.w1, isCorrect: false },
+            { text: q.w2, isCorrect: false },
+            { text: q.w3, isCorrect: false }
+        ];
+        options = shuffleArray(options); 
+
+        const optionsArea = document.getElementById('options-area');
+        optionsArea.innerHTML = "";
+        
+        options.forEach(opt => {
+            if(opt.text && opt.text.trim() !== "undefined" && opt.text.trim() !== "") {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt.text;
+                // 🌟 클릭하면 바로 넘어가도록 수정됨!
+                btn.onclick = () => checkAnswer(opt.isCorrect, opt.text, q.question, q.answer);
+                optionsArea.appendChild(btn);
+            }
+        });
+    }
+
+    // 🌟 실전 모드: 클릭 즉시 오답만 몰래 기록하고 바로 다음으로 넘어감
+    function checkAnswer(isCorrect, pickedText, questionText, correctAnswerText) {
+        if(isCorrect) {
+            score++;
+        } else {
+            // 틀렸을 경우 오답 노트에 저장
+            wrongAnswers.push({
+                question: questionText,
+                correct: correctAnswerText,
+                picked: pickedText
+            });
+        }
+
+        currentIndex++;
+        if(currentIndex < currentQuizData.length) {
+            renderQuiz(); // 다음 문제 바로 출제 (딜레이 없음!)
+        } else {
+            endTest(); // 다 풀면 결과 화면으로
+        }
+    }
+
+   function endTest() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        
+        // 🌟 100점 만점 환산을 없애고 '맞은 개수 / 전체 개수'로 직관적으로 변경!
+        const finalScoreText = `${score} / ${currentQuizData.length}`;
+        document.getElementById('score-text').innerText = finalScoreText;
+
+        // 오답 노트 화면에 뿌려주기
+        const wrongContainer = document.getElementById('wrong-answers-container');
+        const wrongList = document.getElementById('wrong-answers-list');
+        wrongList.innerHTML = "";
+
+        if (wrongAnswers.length > 0) {
+            wrongContainer.classList.remove('hidden');
+            wrongAnswers.forEach(item => {
+                wrongList.innerHTML += `
+                    <div class="wrong-item">
+                        <div class="w-question">Q. ${item.question}</div>
+                        <div>정답: <span class="w-answer">${item.correct}</span></div>
+                        <div>내가 고른 답: <span class="w-picked">${item.picked}</span></div>
+                    </div>
+                `;
+            });
+        } else {
+            wrongContainer.classList.add('hidden');
+        }
+
+        // 🌟 구글 시트에도 '40 / 45' 형태로 전송됩니다!
+        const formData = `action=saveScore&studentName=${encodeURIComponent(studentName)}&subjectDay=${encodeURIComponent(subjectType + " Day " + selectedDay)}&range=${encodeURIComponent(selectedRange)}&score=${encodeURIComponent(finalScoreText)}`;
+
+        fetch(scriptURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData
+        })
+        .then(res => {
+            document.getElementById('saving-msg').innerText = "✅ 성적이 성공적으로 저장되었습니다!";
+            document.getElementById('saving-msg').style.color = "#38a169";
+        })
+        .catch(err => {
+            document.getElementById('saving-msg').innerText = "❌ 성적 저장에 실패했습니다.";
+            document.getElementById('saving-msg').style.color = "red";
+        });
+    }
+</script>
+</body>
+</html>
