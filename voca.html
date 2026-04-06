@@ -9,7 +9,7 @@
         .container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1, h2 { color: #1a365d; text-align: center; }
         
-        input[type="text"], select { width: 100%; padding: 15px; font-size: 16px; margin: 10px 0 20px 0; border: 2px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; }
+        input[type="text"], input[type="password"], select { width: 100%; padding: 15px; font-size: 16px; margin: 10px 0 20px 0; border: 2px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; }
         
         button { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background-color: #2b6cb0; color: white; border: none; border-radius: 10px; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #1a365d; }
@@ -39,6 +39,9 @@
         
         <label><b>🙋‍♂️ 학생 이름</b></label>
         <input type="text" id="student-name" placeholder="이름을 입력하세요 (예: 홍길동)">
+
+        <label><b>🔒 학원 비밀번호</b></label>
+        <input type="password" id="secret-pw" placeholder="비밀번호를 입력하세요">
 
         <label><b>📅 학습할 Day 선택</b></label>
         <select id="day-select">
@@ -78,6 +81,9 @@
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbzxJ085RNS9FsBUGAjwtVJsAswTqT7ZzV4qy5-mPjygedrWAY634Nq6eDt7XZYo4fYxIA/exec';
     
+    // 🌟 선생님이 원하시는 학원 전용 고정 비밀번호를 여기에 적어주세요!
+    const correctPassword = "dssky"; 
+
     let allVocaData = [];
     let currentQuizData = [];
     let currentIndex = 0;
@@ -114,21 +120,28 @@
 
     function startTest() {
         studentName = document.getElementById('student-name').value.trim();
+        const enteredPw = document.getElementById('secret-pw').value;
         selectedDay = document.getElementById('day-select').value;
         const rangeVal = document.getElementById('range-select').value;
 
         if(!studentName) { alert("학생 이름을 입력해 주세요!"); return; }
+        
+        // 🌟 비밀번호 확인 방어막 작동!
+        if(enteredPw !== correctPassword) {
+            alert("❌ 비밀번호가 틀렸습니다. 학원에 문의하세요.");
+            document.getElementById('secret-pw').value = ""; // 틀리면 입력창 비워주기
+            document.getElementById('secret-pw').focus();
+            return; 
+        }
 
         let dayWords = allVocaData.filter(item => item.day === selectedDay);
-        
-        // 🌟 마법의 구간: 단어 개수가 몇 개든 알아서 절반으로 쪼갭니다!
-        let midPoint = Math.ceil(dayWords.length / 2); // 정확히 가운데 번호 계산
+        let midPoint = Math.ceil(dayWords.length / 2); 
 
         if (rangeVal === 'half1') {
-            currentQuizData = dayWords.slice(0, midPoint); // 처음부터 가운데까지
+            currentQuizData = dayWords.slice(0, midPoint); 
             selectedRange = "앞부분 절반";
         } else if (rangeVal === 'half2') {
-            currentQuizData = dayWords.slice(midPoint); // 가운데부터 끝까지
+            currentQuizData = dayWords.slice(midPoint); 
             selectedRange = "뒷부분 절반";
         } else {
             currentQuizData = dayWords;
