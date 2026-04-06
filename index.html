@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대성 SKY 학습 사이트</title>
+    <style>
+        /* 기본 디자인 설정 */
+        body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: 50px auto; position: relative; }
+        
+        .logo { width: 150px; height: auto; margin-bottom: 20px; }
+        h2 { color: #1a365d; margin-bottom: 10px; }
+        p { color: #666; margin-bottom: 30px; }
+        
+        /* 버튼 그룹: 바둑판 배열 + 스크롤 */
+        .btn-group { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            padding: 5px;
+        }
+
+        .full-width { grid-column: span 2; }
+
+        button { padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; background-color: #2b6cb0; color: white; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #1a365d; }
+        .back-btn { background-color: #a0aec0; margin-top: 10px; }
+        .back-btn:hover { background-color: #718096; }
+
+        input[type="password"] { padding: 15px; font-size: 20px; text-align: center; border: 2px solid #ccc; border-radius: 10px; width: 80%; margin: 0 auto 15px auto; display: block; letter-spacing: 5px; }
+        .hidden { display: none !important; }
+
+        /* 우측 상단 선생님 로그인 버튼 디자인 */
+        .admin-login-btn {
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            padding: 8px 15px; 
+            font-size: 14px; 
+            background-color: transparent; 
+            color: #718096; 
+            border: 1px solid #cbd5e0; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+        .admin-login-btn:hover {
+            background-color: #e2e8f0; 
+            color: #1a365d;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="admin-login-btn" onclick="location.href='admin.html'">👨‍🏫 선생님 로그인</button>
+
+    <div class="container">
+        <img src="작은로고.jpg" alt="대성 SKY 학원 로고" class="logo">
+
+        <div id="step1">
+            <h2>대성 SKY 학습 사이트</h2>
+            <p>학습할 학년을 선택해 주세요.</p>
+            <div class="btn-group" id="grade-btns">
+                <p style="grid-column: span 2;">데이터를 불러오는 중입니다... ⏳</p>
+            </div>
+        </div>
+
+        <div id="step2" class="hidden">
+            <h2>과목 선택</h2>
+            <p id="grade-title">선택한 학년: -</p>
+            <div class="btn-group" id="subject-btns"></div>
+            <button class="back-btn full-width" onclick="goBack('step2', 'step1')">돌아가기</button>
+        </div>
+
+        <div id="step3" class="hidden">
+            <h2>문제 선택</h2>
+            <p id="subject-title">선택한 과목: -</p>
+            <div class="btn-group" id="problem-btns"></div>
+            <button class="back-btn full-width" onclick="goBack('step3', 'step2')">돌아가기</button>
+        </div>
+
+        <div id="step4" class="hidden">
+            <h2>접속 암호</h2>
+            <p id="problem-title">선택한 문제: -</p>
+            <input type="password" id="password-input" placeholder="4자리 암호" maxlength="4">
+            <button class="full-width" style="width: 100%; margin-bottom: 10px;" onclick="checkPassword()">문제 풀기 시작</button>
+            <button class="back-btn full-width" style="width: 100%;" onclick="goBack('step4', 'step3')">돌아가기</button>
+        </div>
+    </div>
+
+    <script>
+        // 🌟 선생님의 구글 웹 앱 URL을 따옴표 안에 넣어주세요!
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzxJ085RNS9FsBUGAjwtVJsAswTqT7ZzV4qy5-mPjygedrWAY634Nq6eDt7XZYo4fYxIA/exec';
+
+        let db = {}; 
+        let passwordDB = {}; 
+        let selectedGrade = "";
+        let selectedSubject = "";
+        let selectedProblem = "";
+
+        window.onload = function() {
+            const gradeDiv = document.getElementById('grade-btns');
+
+            fetch(scriptURL)
+            .then(response => response.json())
+            .then(data => {
+                gradeDiv.innerHTML = ""; 
+                
+                data.forEach(item => {
+                    if (!db[item.grade]) db[item.grade] = {};
+                    if (!db[item.grade][item.subject]) db[item.grade][item.subject] = [];
+                    
+                    if (!db[item.grade][item.subject].includes(item.set)) {
+                        db[item.grade][item.subject].push(item.set);
+                    }
+                    
+                    const key = `${item.grade}-${item.subject}-${item.set}`;
+                    passwordDB[key] = item.password;
+                });
+
+                let hasData = false;
+                for (let grade in db) {
+                    hasData = true;
+                    gradeDiv.innerHTML += `<button onclick="selectGrade('${grade}')">${grade}</button>`;
+                }
+                
+                if(!hasData) {
+                    gradeDiv.innerHTML = "<p style='grid-column: span 2;'>아직 등록된 문제가 없습니다.</p>";
+                }
+            })
+            .catch(error => {
+                gradeDiv.innerHTML = "<p style='grid-column: span 2; color: red;'>데이터를 불러오지 못했습니다. 새로고침 해주세요.</p>";
+            });
+        }
+
+        function selectGrade(grade) {
+            selectedGrade = grade;
+            document.getElementById('grade-title').innerText = "선택한 학년: " + grade;
+            const subjectDiv = document.getElementById('subject-btns');
+            subjectDiv.innerHTML = ""; 
+            for (let subject in db[grade]) {
+                subjectDiv.innerHTML += `<button onclick="selectSubject('${subject}')">${subject}</button>`;
+            }
+            changeScreen('step1', 'step2');
+        }
+
+        function selectSubject(subject) {
+            selectedSubject = subject;
+            document.getElementById('subject-title').innerText = "선택한 과목: " + subject;
+            const problemDiv = document.getElementById('problem-btns');
+            problemDiv.innerHTML = ""; 
+            
+            let problems = db[selectedGrade][subject];
+            for (let i = 0; i < problems.length; i++) {
+                problemDiv.innerHTML += `<button onclick="selectProblem('${problems[i]}')">${problems[i]}</button>`;
+            }
+            changeScreen('step2', 'step3');
+        }
+
+        function selectProblem(problem) {
+            selectedProblem = problem;
+            document.getElementById('problem-title').innerText = "선택한 문제: " + problem;
+            changeScreen('step3', 'step4');
+        }
+
+        function changeScreen(hideId, showId) {
+            document.getElementById(hideId).classList.add('hidden');
+            document.getElementById(showId).classList.remove('hidden');
+        }
+        
+        function goBack(hideId, showId) {
+            changeScreen(hideId, showId);
+            document.getElementById('password-input').value = ""; 
+        }
+
+        function checkPassword() {
+            const pwd = document.getElementById('password-input').value;
+            const key = `${selectedGrade}-${selectedSubject}-${selectedProblem}`;
+            const realPassword = passwordDB[key]; 
+
+            if(pwd === realPassword) {
+                // 🌟 귀찮은 alert() 팝업창을 지우고 곧바로 이동하게 만들었습니다!
+                window.location.href = "quiz.html?problem=" + selectedProblem;
+            } else {
+                // 단, 암호가 틀렸을 때는 알려줘야 하니 경고창을 남겨둡니다.
+                alert("암호가 틀렸습니다. 다시 확인해 주세요!");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>선생님 관리자 페이지</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #e2e8f0; margin: 0; padding: 20px; text-align: center; }
+        .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 50px auto; text-align: left; }
+        
+        h2 { color: #2d3748; text-align: center; margin-bottom: 30px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #4a5568; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        
+        button { width: 100%; padding: 15px; background-color: #2b6cb0; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        button:hover { background-color: #1a365d; }
+        
+        .back-btn { background-color: transparent; border: 1px solid #cbd5e0; color: #4a5568; margin-top: 20px; }
+        .back-btn:hover { background-color: #e2e8f0; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="login-screen">
+        <h2>👨‍🏫 대성 SKY 관리자 로그인</h2>
+        <div class="form-group">
+            <label>관리자 암호</label>
+            <input type="password" id="admin-pw" placeholder="암호를 입력하세요">
+        </div>
+        <button onclick="adminLogin()">로그인</button>
+        <button class="back-btn" onclick="location.href='index.html'">학생 첫 화면으로 돌아가기</button>
+    </div>
+
+    <div class="container hidden" id="admin-dashboard">
+        <h2>📝 새 문제 세트 만들기</h2>
+        
+        <div class="form-group">
+            <label>1. 학년 선택</label>
+            <select id="grade">
+                <option value="고1">고1</option>
+                <option value="고2">고2</option>
+                <option value="고3">고3</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>2. 과목 이름 (직접 입력)</label>
+            <input type="text" id="subject" placeholder="예: 영어1, 수능특강, 1학기 중간고사">
+        </div>
+
+        <div class="form-group">
+            <label>3. 문제 세트 이름</label>
+            <input type="text" id="problem-set" placeholder="예: ae1, 1과 단어시험">
+        </div>
+
+        <div class="form-group">
+            <label>4. 학생용 접속 암호 (4자리)</label>
+            <input type="text" id="student-pw" placeholder="예: 1234" maxlength="4">
+        </div>
+
+        <button onclick="saveData()">구글 시트에 등록하기 (준비중)</button>
+    </div>
+
+    <script>
+        // 선생님 로그인 기능
+        function adminLogin() {
+            const pw = document.getElementById('admin-pw').value;
+            if(pw === "sky123") { 
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+            } else {
+                alert("관리자 암호가 일치하지 않습니다.");
+            }
+        }
+
+        // 🌟 선생님의 구글 웹 앱 URL 
+       // 🌟 선생님의 구글 웹 앱 URL을 따옴표 안에 넣어주세요!
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzxJ085RNS9FsBUGAjwtVJsAswTqT7ZzV4qy5-mPjygedrWAY634Nq6eDt7XZYo4fYxIA/exec';
+
+        function saveData() {
+            const grade = document.getElementById('grade').value;
+            const subject = document.getElementById('subject').value;
+            const set = document.getElementById('problem-set').value;
+            const pw = document.getElementById('student-pw').value;
+
+            if(!subject || !set || !pw) {
+                alert("모든 칸을 채워주세요!");
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick="saveData()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "구글 시트로 전송 중입니다... ⏳";
+
+            const formData = new FormData();
+            formData.append('grade', grade);
+            formData.append('subject', subject);
+            formData.append('set', set);
+            formData.append('password', pw);
+
+            // 🚀 핵심 변경: 브라우저 보안을 통과하는 마법의 키워드 (mode: 'no-cors') 추가!
+            fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors', // <--- 이 한 줄이 해결사입니다!
+                body: formData
+            })
+            .then(() => {
+                // 검사를 통과했으므로 무사히 성공 알림을 띄웁니다.
+                alert(`성공! [${grade} - ${subject} - ${set}] 문제가 구글 시트에 저장되었습니다. 🎉`);
+                btn.innerText = originalText;
+                
+                // 입력창 비우기
+                document.getElementById('subject').value = "";
+                document.getElementById('problem-set').value = "";
+                document.getElementById('student-pw').value = "";
+            })
+            .catch(error => {
+                alert("저장에 실패했습니다. 인터넷 연결이나 주소를 다시 확인해 주세요.");
+                btn.innerText = originalText;
+            });
+        }
+    </script>
+</body>
+</html>

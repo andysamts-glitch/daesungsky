@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice 모드 - 대성 SKY</title>
+    <style>
+        body { margin: 0; font-family: 'Malgun Gothic', sans-serif; height: 100vh; background-color: #f4f6f9; overflow: hidden; }
+        #rotate-message { display: none; height: 100vh; background-color: #1a365d; color: white; text-align: center; align-content: center; font-size: 24px; font-weight: bold; padding: 20px; }
+        #split-screen { display: flex; height: 100vh; }
+
+        /* 왼쪽 지문 */
+        #left-pane { width: 50%; padding: 40px; background-color: white; border-right: 2px solid #ccc; overflow-y: auto; box-sizing: border-box; line-height: 1.8; font-size: 17px; }
+        
+        /* 오른쪽 문제 영역 */
+        #right-pane { width: 50%; display: flex; flex-direction: column; background-color: #f8fafc; position: relative; }
+
+        .progress-container { padding: 20px 40px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .progress-text { font-weight: bold; color: #2b6cb0; font-size: 18px; }
+
+        #quiz-content { flex: 1; padding: 40px; overflow-y: auto; box-sizing: border-box; }
+        .question-text { font-size: 22px; font-weight: bold; margin-bottom: 30px; color: #2d3748; }
+
+        /* 객관식 보기 디자인 */
+        .options-container { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn { padding: 18px; font-size: 18px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; text-align: left; transition: 0.2s; font-weight: 500; }
+        .option-btn:hover { border-color: #cbd5e0; background-color: #f1f5f9; }
+        .option-btn.correct { background-color: #c6f6d5 !important; border-color: #38a169 !important; color: #22543d; }
+        .option-btn.wrong { background-color: #fed7d7 !important; border-color: #e53e3e !important; color: #822727; }
+
+        /* 주관식 입력창 디자인 */
+        .subjective-input { width: 100%; padding: 18px; font-size: 20px; border: 2px solid #cbd5e0; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; }
+        .subjective-submit { width: 100%; padding: 18px; font-size: 18px; background: #2b6cb0; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .subjective-submit:hover { background: #1a365d; }
+        .subjective-submit:disabled { background: #a0aec0; cursor: not-allowed; }
+
+        .feedback-msg { height: 30px; margin-top: 20px; font-weight: bold; text-align: center; font-size: 18px; }
+        .nav-footer { padding: 20px 40px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+        .nav-btn { padding: 10px 25px; border-radius: 8px; border: 1px solid #cbd5e0; background: white; cursor: pointer; font-weight: bold; }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        @media screen and (orientation: portrait) and (max-width: 768px) {
+            #split-screen { display: none !important; } #rotate-message { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-message">📱<br><br>가로로 돌려주세요 🔄</div>
+
+    <div id="split-screen">
+        <div id="left-pane">
+            <h2 id="passage-title">[지문]</h2>
+            <div id="passage-content">로드 중...</div>
+        </div>
+
+        <div id="right-pane">
+            <div class="progress-container">
+                <span id="set-name" style="font-weight:bold; color:#718096;">세트 이름</span>
+                <span class="progress-text" id="progress-idx">0 / 0</span>
+            </div>
+
+            <div id="quiz-content">
+                <div id="question-area">
+                    <div class="question-text" id="q-text">문제를 불러오고 있습니다...</div>
+                    <div class="options-container" id="options-area"></div>
+                    <div class="feedback-msg" id="feedback-text"></div>
+                </div>
+            </div>
+
+            <div class="nav-footer">
+                <button class="nav-btn" id="prev-btn" onclick="goPrev()">◀ 이전 문제</button>
+                <button class="nav-btn" id="next-btn" onclick="goNext()">다음 문제 ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🌟 선생님의 구글 웹 앱 URL 
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzxJ085RNS9FsBUGAjwtVJsAswTqT7ZzV4qy5-mPjygedrWAY634Nq6eDt7XZYo4fYxIA/exec';
+        
+        let quizData = [];
+        let currentIndex = 0;
+        let isProcessing = false; 
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const problemSet = urlParams.get('problem');
+            if(!problemSet) return;
+
+            document.getElementById('set-name').innerText = problemSet;
+
+            // 🚀 핵심 수정 1: 브라우저가 옛날 데이터를 기억하지 못하게 매번 최신 데이터를 가져오는 마법
+            const noCacheUrl = `${scriptURL}?action=getQuiz&set=${problemSet}&t=${new Date().getTime()}`;
+
+            fetch(noCacheUrl)
+            .then(res => res.json())
+            .then(data => {
+                if(data.passage && data.passage.trim() !== "") {
+                    document.getElementById('passage-content').innerHTML = data.passage.replace(/\n/g, "<br>");
+                } else {
+                    document.getElementById('left-pane').style.display = 'none';
+                    document.getElementById('right-pane').style.width = '100%';
+                }
+
+                quizData = data.questions || [];
+                if(quizData.length > 0) {
+                    renderQuestion();
+                } else {
+                    document.getElementById('q-text').innerText = "등록된 문제가 없습니다.";
+                }
+            });
+        }
+
+        function renderQuestion() {
+            isProcessing = false;
+            const q = quizData[currentIndex];
+            document.getElementById('progress-idx').innerText = `${currentIndex + 1} / ${quizData.length}`;
+            document.getElementById('q-text').innerText = `Q${currentIndex + 1}. ${q.question}`;
+            document.getElementById('feedback-text').innerText = "";
+            
+            const optionsArea = document.getElementById('options-area');
+            optionsArea.innerHTML = "";
+            
+            // 🚀 핵심 수정 2: 'undefined'나 'null' 같은 유령 글자까지 완벽하게 걸러내는 깐깐한 조건!
+            const checkOption = String(q.c1).trim().toLowerCase();
+            
+            if (checkOption !== "" && checkOption !== "undefined" && checkOption !== "null") {
+                // 객관식 렌더링
+                const choices = [q.c1, q.c2, q.c3, q.c4];
+                choices.forEach((text, i) => {
+                    const checkText = String(text).trim().toLowerCase();
+                    if (checkText !== "" && checkText !== "undefined" && checkText !== "null") {
+                        const btn = document.createElement('button');
+                        btn.className = 'option-btn';
+                        btn.innerText = `${i+1}. ${text}`;
+                        btn.onclick = () => checkObjectiveAnswer(btn, i + 1);
+                        optionsArea.appendChild(btn);
+                    }
+                });
+            } else {
+                // 주관식 렌더링
+                const inputForm = document.createElement('div');
+                inputForm.innerHTML = `
+                    <input type="text" id="subjective-input" class="subjective-input" placeholder="정답을 입력하세요" onkeypress="if(event.key === 'Enter') checkSubjectiveAnswer()">
+                    <button id="subjective-btn" class="subjective-submit" onclick="checkSubjectiveAnswer()">제출하기</button>
+                `;
+                optionsArea.appendChild(inputForm);
+                // 화면에 나타날 때 약간의 시차를 두어 커서가 확실하게 깜빡이게 보장합니다.
+                setTimeout(() => document.getElementById('subjective-input').focus(), 100);
+            }
+
+            document.getElementById('prev-btn').disabled = (currentIndex === 0);
+            document.getElementById('next-btn').disabled = (currentIndex === quizData.length - 1);
+        }
+
+        // 객관식 채점
+        function checkObjectiveAnswer(btn, clickedNum) {
+            if(isProcessing) return;
+            const correctAnswer = parseInt(quizData[currentIndex].answer);
+            handleResult(clickedNum === correctAnswer, btn);
+        }
+
+        // 주관식 채점
+        function checkSubjectiveAnswer() {
+            if(isProcessing) return;
+            const inputEl = document.getElementById('subjective-input');
+            const btnEl = document.getElementById('subjective-btn');
+            
+            const userAnswer = inputEl.value.trim().toLowerCase();
+            const correctAnswer = String(quizData[currentIndex].answer).trim().toLowerCase();
+
+            if (userAnswer === "") {
+                alert("정답을 입력해 주세요!");
+                return;
+            }
+
+            handleResult(userAnswer === correctAnswer, inputEl, btnEl);
+        }
+
+        // 정답/오답 공통 처리
+        function handleResult(isCorrect, targetEl, btnEl = null) {
+            const feedback = document.getElementById('feedback-text');
+
+            if(isCorrect) {
+                isProcessing = true;
+                if(btnEl) btnEl.disabled = true; 
+                
+                targetEl.style.backgroundColor = "#c6f6d5"; 
+                targetEl.style.borderColor = "#38a169";
+                
+                feedback.innerText = "정답입니다! 잠시 후 넘어갑니다. ✨";
+                feedback.style.color = "#38a169";
+
+                setTimeout(() => {
+                    if(currentIndex < quizData.length - 1) {
+                        currentIndex++;
+                        renderQuestion();
+                    } else {
+                        feedback.innerText = "축하합니다! 모든 문제를 완료했습니다. 🎉";
+                    }
+                }, 1200);
+            } else {
+                targetEl.style.backgroundColor = "#fed7d7"; 
+                targetEl.style.borderColor = "#e53e3e";
+                
+                feedback.innerText = "오답! 다시 푸세요 ❌";
+                feedback.style.color = "#e53e3e";
+                
+                setTimeout(() => {
+                    targetEl.style.backgroundColor = ""; 
+                    targetEl.style.borderColor = "";
+                    if(targetEl.tagName === "INPUT") {
+                        targetEl.value = ""; 
+                        targetEl.focus();
+                    }
+                }, 1000);
+            }
+        }
+
+        function goPrev() {
+            if(currentIndex > 0) { currentIndex--; renderQuestion(); }
+        }
+
+        function goNext() {
+            if(currentIndex < quizData.length - 1) { currentIndex++; renderQuestion(); }
+        }
+    </script>
+</body>
+</html>
