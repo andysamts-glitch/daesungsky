@@ -110,15 +110,29 @@
     let selectedRange = "";
     let subjectType = "";
 
-    window.onload = function() {
+window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
-        subjectType = urlParams.get('type') === 'toeic' ? '토익' : (urlParams.get('type') === '특례' ? '특례' : '토플');
+        let typeParam = urlParams.get('type');
+
+        // 🌟 무한 확장 마법: toefl/toeic은 기존처럼 변환하고, 나머지는 입력한 그대로 과목명으로 씁니다!
+        if (typeParam === 'toefl') {
+            subjectType = '토플';
+        } else if (typeParam === 'toeic') {
+            subjectType = '토익';
+        } else if (typeParam) {
+            // SAT, 특례, 수능 등 버튼에서 보낸 영어나 한글을 100% 그대로 사용!
+            subjectType = typeParam; 
+        } else {
+            subjectType = '토플'; // 아무것도 없을 때의 오류 방지용
+        }
+
         document.getElementById('title-text').innerText = `${subjectType} 단어 테스트`;
 
         fetch(`${scriptURL}?action=getVoca&t=${new Date().getTime()}`)
         .then(res => res.json())
         .then(data => {
-            allVocaData = data.filter(item => item.subject === subjectType);
+            // 🌟 A열에 적힌 글자와 완벽하게 똑같은 단어들만 쏙쏙 뽑아옵니다!
+            allVocaData = data.filter(item => String(item.subject).trim() === String(subjectType).trim());
             
             let days = [...new Set(allVocaData.map(item => item.day))].sort((a,b) => a-b);
             let daySelect = document.getElementById('day-select');
