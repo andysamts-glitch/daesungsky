@@ -18,13 +18,11 @@
         .option-btn { background-color: white; color: #2d3748; border: 2px solid #e2e8f0; margin-bottom: 10px; text-align: left; transition: 0.2s; }
         .option-btn:hover { background-color: #edf2f7; border-color: #cbd5e0; }
         
-        /* 🌟 내가 선택한 답을 표시해주는 스타일 */
         .option-btn.selected { background-color: #ebf8ff; border-color: #3182ce; color: #2b6cb0; font-weight: bold; }
 
         .progress { text-align: right; font-weight: bold; color: #718096; margin-bottom: 20px; }
         .question { font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 30px; color: #2b6cb0; }
         
-        /* 이전/다음 네비게이션 버튼 영역 */
         .nav-container { display: flex; gap: 10px; margin-top: 20px; }
         .nav-btn { flex: 1; padding: 12px; font-size: 16px; }
         .nav-prev { background-color: #718096; }
@@ -51,7 +49,7 @@
         <label><b>🙋‍♂️ 학생 이름</b></label>
         <input type="text" id="student-name" placeholder="이름을 입력하세요 (예: 홍길동)">
 
-        <label><b>🔒 학원 비밀번호</b></label>
+        <label><b>🔒 과목별 접속 암호</b></label>
         <input type="password" id="secret-pw" placeholder="비밀번호를 입력하세요">
 
         <label><b>📅 학습할 Day 선택</b></label>
@@ -98,11 +96,17 @@
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbzxJ085RNS9FsBUGAjwtVJsAswTqT7ZzV4qy5-mPjygedrWAY634Nq6eDt7XZYo4fYxIA/exec';
     
-    // 🌟 'dssky'를 암호화한 외계어
-    const secretHash = "ZHNza3k="; 
+    // 🌟 과목별 암호화(Base64) 비밀번호 사전입니다!
+    const subjectPasswords = {
+        "토플": "ZHNza3k=",    
+        "토익": "ZHNza3k=",  
+        "SAT": "ZHNzYXQx",     
+        "교과서": "ZHN0ZXh0MQ==",    
+        "기본": "cGFzcw=="     // 위 목록에 없는 과목을 눌렀을 때의 기본 암호: pass
+    };
 
     let allVocaData = [];
-    let currentQuizData = []; // 이 안에 섞인 보기, 선택한 답안을 모두 기록합니다.
+    let currentQuizData = []; 
     let currentIndex = 0;
     
     let studentName = "";
@@ -110,20 +114,18 @@
     let selectedRange = "";
     let subjectType = "";
 
-window.onload = function() {
+    window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         let typeParam = urlParams.get('type');
 
-        // 🌟 무한 확장 마법: toefl/toeic은 기존처럼 변환하고, 나머지는 입력한 그대로 과목명으로 씁니다!
         if (typeParam === 'toefl') {
             subjectType = '토플';
         } else if (typeParam === 'toeic') {
             subjectType = '토익';
         } else if (typeParam) {
-            // SAT, 특례, 수능 등 버튼에서 보낸 영어나 한글을 100% 그대로 사용!
             subjectType = typeParam; 
         } else {
-            subjectType = '토플'; // 아무것도 없을 때의 오류 방지용
+            subjectType = '토플'; 
         }
 
         document.getElementById('title-text').innerText = `${subjectType} 단어 테스트`;
@@ -131,7 +133,6 @@ window.onload = function() {
         fetch(`${scriptURL}?action=getVoca&t=${new Date().getTime()}`)
         .then(res => res.json())
         .then(data => {
-            // 🌟 A열에 적힌 글자와 완벽하게 똑같은 단어들만 쏙쏙 뽑아옵니다!
             allVocaData = data.filter(item => String(item.subject).trim() === String(subjectType).trim());
             
             let days = [...new Set(allVocaData.map(item => item.day))].sort((a,b) => a-b);
@@ -164,8 +165,12 @@ window.onload = function() {
 
         if(!studentName) { alert("학생 이름을 입력해 주세요!"); return; }
         
-        if(btoa(enteredPw) !== secretHash) {
-            alert("❌ 비밀번호가 틀렸습니다. 학원에 문의하세요.");
+        // 🌟 마법의 암호 확인 구간! 선택한 과목의 암호를 사전에서 꺼내옵니다.
+        // 만약 사전에 등록되지 않은 새로운 과목이라면 "기본" 암호를 사용합니다.
+        let correctHash = subjectPasswords[subjectType] || subjectPasswords["기본"];
+
+        if(btoa(enteredPw) !== correctHash) {
+            alert("❌ 비밀번호가 틀렸습니다. 학원/선생님께 문의하세요.");
             document.getElementById('secret-pw').value = ""; 
             document.getElementById('secret-pw').focus();
             return; 
@@ -191,7 +196,6 @@ window.onload = function() {
             return;
         }
 
-        // 🌟 마법의 핵심: 시험 시작 전 모든 문제의 보기를 섞어두고, 빈 답안지를 만듭니다.
         currentQuizData = rawData.map(q => {
             let options = [
                 { text: q.answer, isCorrect: true },
@@ -203,9 +207,9 @@ window.onload = function() {
             return {
                 question: q.question,
                 answer: q.answer,
-                options: shuffleArray(options), // 보기를 섞어서 저장
-                pickedText: null,               // 학생이 고른 답안 (초기엔 비어있음)
-                isCorrect: false                // 정답 여부
+                options: shuffleArray(options), 
+                pickedText: null,               
+                isCorrect: false                
             };
         });
 
@@ -221,9 +225,8 @@ window.onload = function() {
         document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${currentQuizData.length}`;
         document.getElementById('question-text').innerText = q.question; 
         
-        renderOptions(); // 보기 그리기
+        renderOptions(); 
 
-        // 네비게이션 버튼 상태 조절
         document.getElementById('prev-btn').disabled = (currentIndex === 0);
         
         if (currentIndex === currentQuizData.length - 1) {
@@ -244,7 +247,6 @@ window.onload = function() {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
             
-            // 학생이 이전에 이 보기를 골랐었다면 색칠해줍니다!
             if (q.pickedText === opt.text) {
                 btn.classList.add('selected');
             }
@@ -255,15 +257,12 @@ window.onload = function() {
         });
     }
 
-    // 보기를 클릭했을 때
     function selectOption(pickedText, isCorrect) {
-        // 기록 장부에 학생이 고른 답과 정답 여부를 적습니다.
         currentQuizData[currentIndex].pickedText = pickedText;
         currentQuizData[currentIndex].isCorrect = isCorrect;
         
-        renderOptions(); // 파란색으로 다시 색칠
+        renderOptions(); 
 
-        // 마지막 문제가 아니라면 0.3초 뒤 부드럽게 다음으로 넘어갑니다. (속도감 유지)
         if(currentIndex < currentQuizData.length - 1) {
             setTimeout(() => {
                 nextQuestion();
@@ -286,7 +285,6 @@ window.onload = function() {
     }
 
     function endTest() {
-        // 제출하기 버튼을 누르면 채점을 시작합니다.
         let finalScore = currentQuizData.filter(q => q.isCorrect).length;
         let wrongAnswers = currentQuizData.filter(q => !q.isCorrect);
 
