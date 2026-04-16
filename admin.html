@@ -68,14 +68,14 @@
     <script>
         // 선생님 로그인 기능
         function adminLogin() {
-            const pw = document.getElementById('admin-pw').value;
-            if(pw === "c2t5MTIz") { 
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('admin-dashboard').classList.remove('hidden');
-            } else {
-                alert("관리자 암호가 일치하지 않습니다.");
-            }
-        }
+    const pw = document.getElementById('admin-pw').value;
+    if (btoa(pw) === "c2t5MTIz") {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('admin-dashboard').classList.remove('hidden');
+    } else {
+        alert("관리자 암호가 일치하지 않습니다.");
+    }
+}
 
         
        // 🌟 선생님의 구글 웹 앱 URL을 따옴표 안에 넣어주세요!
