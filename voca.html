@@ -52,7 +52,7 @@
         <label><b>🔒 과목별 접속 암호</b></label>
         <input type="password" id="secret-pw" placeholder="비밀번호를 입력하세요">
 
-        <label><b>📅 학습할 Day 선택</b></label>
+        <label id="day-label"><b>📅 학습할 Day 선택</b></label>
         <select id="day-select">
             <option value="">데이터를 불러오는 중입니다...</option>
         </select>
@@ -129,6 +129,8 @@
         }
 
         document.getElementById('title-text').innerText = `${subjectType} 단어 테스트`;
+        document.getElementById('day-label').innerHTML =
+            subjectType === '교과서' ? '<b>📚 학습할 과목 선택</b>' : '<b>📅 학습할 Day 선택</b>';
 
         fetch(`${scriptURL}?action=getVoca&t=${new Date().getTime()}`)
         .then(res => res.json())
@@ -139,7 +141,8 @@
             let daySelect = document.getElementById('day-select');
             daySelect.innerHTML = "";
             days.forEach(d => {
-                daySelect.innerHTML += `<option value="${d}">Day ${d}</option>`;
+                const optionText = subjectType === '교과서' ? `${d}` : `Day ${d}`;
+                daySelect.innerHTML += `<option value="${d}">${optionText}</option>`;
             });
 
             if(days.length === 0) {
@@ -314,7 +317,11 @@
             wrongContainer.classList.add('hidden');
         }
 
-        const formData = `action=saveScore&studentName=${encodeURIComponent(studentName)}&subjectDay=${encodeURIComponent(subjectType + " Day " + selectedDay)}&range=${encodeURIComponent(selectedRange)}&score=${encodeURIComponent(finalScoreText)}`;
+        const subjectDayLabel = subjectType === '교과서'
+            ? `${subjectType} 과목 ${selectedDay}`
+            : `${subjectType} Day ${selectedDay}`;
+
+        const formData = `action=saveScore&studentName=${encodeURIComponent(studentName)}&subjectDay=${encodeURIComponent(subjectDayLabel)}&range=${encodeURIComponent(selectedRange)}&score=${encodeURIComponent(finalScoreText)}`;
 
         fetch(scriptURL, {
             method: 'POST',
