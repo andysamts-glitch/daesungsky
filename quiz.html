@@ -10,7 +10,9 @@
         
         /* 레이아웃 (페세지가 있을 때와 없을 때 자동 변경) */
         .layout-container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
-        .passage-box { flex: 1; min-width: 300px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.6; font-size: 16px; overflow-y: auto; max-height: 70vh; }
+        .passage-box { flex: 1; min-width: 300px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.6; font-size: 16px; overflow-y: auto; max-height: 70vh; } #passage-text {
+    white-space: pre-wrap;
+}
         .quiz-box { flex: 1; min-width: 300px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
         /* 🌟 페세지가 없을 때 퀴즈 박스를 예쁘게 중앙으로 모아주는 마법! */
@@ -110,7 +112,7 @@
                 document.getElementById('passage-container').classList.add('hidden');
                 document.getElementById('quiz-container').classList.add('no-passage'); // 중앙 정렬 클래스 추가
             } else {
-                document.getElementById('passage-text').innerHTML = data.passage.replace(/\n/g, '<br>');
+                document.getElementById('passage-text').textContent = data.passage;
             }
 
             quizData = data.questions;
