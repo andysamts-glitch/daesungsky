@@ -199,6 +199,9 @@
             return;
         }
 
+        // 🌟 선택한 범위 안에서 단어 순서를 매번 랜덤으로 섞어줍니다!
+        rawData = shuffleArray(rawData);
+
         currentQuizData = rawData.map(q => {
             let options = [
                 { text: q.answer, isCorrect: true },
