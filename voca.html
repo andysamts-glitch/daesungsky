@@ -29,6 +29,8 @@
         .nav-prev:hover { background-color: #4a5568; }
         .submit-test-btn { background-color: #e53e3e; margin-top: 20px; }
         .submit-test-btn:hover { background-color: #c53030; }
+        .home-btn { width: auto; min-width: 110px; padding: 10px 14px; font-size: 15px; background-color: #718096; margin-bottom: 15px; }
+        .home-btn:hover { background-color: #4a5568; }
 
         .wrong-list { margin-top: 20px; text-align: left; background: #fff5f5; padding: 20px; border-radius: 10px; border: 1px solid #feb2b2; }
         .wrong-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #feb2b2; }
@@ -68,6 +70,7 @@
     </div>
 
     <div id="quiz-screen" class="hidden">
+        <button class="home-btn" onclick="goHome()">홈으로</button>
         <div class="progress" id="progress-text">1 / ?</div>
         <div class="question" id="question-text">한국어 뜻</div>
         <div id="options-area"></div>
@@ -287,6 +290,12 @@
         if (currentIndex < currentQuizData.length - 1) {
             currentIndex++;
             renderQuiz();
+        }
+    }
+
+    function goHome() {
+        if (confirm("진행 중인 테스트를 끝내고 첫 화면으로 돌아갈까요?")) {
+            location.href = "index.html";
         }
     }
 

@@ -32,6 +32,8 @@
         input[type="text"] { width: 100%; padding: 15px; font-size: 16px; margin-bottom: 15px; border: 2px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; }
         .submit-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background-color: #2b6cb0; color: white; border: none; border-radius: 10px; cursor: pointer; }
         .submit-btn:hover { background-color: #1a365d; }
+        .home-btn { width: auto; min-width: 110px; padding: 10px 14px; font-size: 15px; font-weight: bold; background-color: #718096; color: white; border: none; border-radius: 10px; cursor: pointer; }
+        .home-btn:hover { background-color: #4a5568; }
         
         /* 🌟 정답 보기 버튼 (주관식용) */
         .hint-btn { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; background-color: #ecc94b; color: #744210; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
@@ -50,6 +52,7 @@
 
 <div class="header">
     <h1 id="test-title">문제 풀이</h1>
+    <button id="home-btn" class="home-btn hidden" onclick="goHome()">홈으로</button>
 </div>
 
 <div id="loading" style="text-align: center; font-size: 20px; margin-top: 50px;">데이터를 불러오는 중입니다... ⏳</div>
@@ -123,6 +126,7 @@
         .then(data => {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('main-layout').classList.remove('hidden');
+            document.getElementById('home-btn').classList.remove('hidden');
 
             // 🌟 페세지 유무에 따른 화면 자동 변환 핵심 로직!
             if (!data.passage || data.passage.trim() === "") {
@@ -297,9 +301,16 @@
         } else {
             const score = getScoreCounts();
             document.getElementById('main-layout').classList.add('hidden');
+            document.getElementById('home-btn').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
             document.getElementById('score-text').innerText = `결과: ${score.questionCount}문제 중 ${score.correctCount}개 정답, ${score.wrongCount}개 오답`;
             saveTestCompletion();
+        }
+    }
+
+    function goHome() {
+        if (confirm("진행 중인 풀이를 끝내고 첫 화면으로 돌아갈까요?")) {
+            location.href = "index.html";
         }
     }
 
