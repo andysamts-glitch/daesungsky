@@ -72,13 +72,16 @@
             <button class="hint-btn" onclick="showAnswer()">💡 답을 모르겠어요 (정답 보기)</button>
         </div>
         
-        <div id="feedback" style="text-align: center; height: 30px; font-weight: bold; margin-top: 15px; font-size: 18px;"></div>
+        <div id="feedback" style="text-align: center; min-height: 30px; font-weight: bold; margin-top: 15px; font-size: 18px; line-height: 1.5;"></div>
+        <button id="next-question-btn" class="submit-btn hidden" style="margin-top: 15px;" onclick="nextQuestion()">다음 문제</button>
     </div>
 </div>
 
 <div id="result-screen" class="hidden" style="max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
     <h2>수고하셨습니다! 🎉</h2>
     <p style="font-size: 20px; color: #4a5568;">모든 문제를 완료했습니다.</p>
+    <p id="score-text" style="font-size: 22px; color: #1a365d; font-weight: bold;"></p>
+    <p id="saving-msg" style="color: #3182ce; font-weight: bold;">완료 기록을 서버에 전송하고 있습니다... ⏳</p>
     <button class="submit-btn" style="margin-top: 20px;" onclick="location.href='index.html'">첫 화면으로 돌아가기</button>
 </div>
 
@@ -88,13 +91,27 @@
     
     let quizData = [];
     let currentIndex = 0;
+    let problemSet = "";
+    let studentName = "";
+    let selectedGrade = "";
+    let selectedSubject = "";
+    let testSaved = false;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
-        const problemSet = urlParams.get('problem');
+        problemSet = urlParams.get('problem') || "";
+        studentName = urlParams.get('student') || "";
+        selectedGrade = urlParams.get('grade') || "";
+        selectedSubject = urlParams.get('subject') || "";
         
         if(!problemSet) {
             alert("잘못된 접근입니다.");
+            location.href = "index.html";
+            return;
+        }
+
+        if(!studentName) {
+            alert("학생 이름이 없습니다. 첫 화면에서 다시 시작해 주세요.");
             location.href = "index.html";
             return;
         }
@@ -134,6 +151,7 @@
         document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${quizData.length}`;
         document.getElementById('question-text').innerText = `Q. ${q.question}`;
         document.getElementById('feedback').innerText = "";
+        document.getElementById('next-question-btn').classList.add('hidden');
         
         const optionsArea = document.getElementById('options-area');
         const subjectiveArea = document.getElementById('subjective-area');
@@ -164,6 +182,7 @@
                     const btn = document.createElement('button');
                     btn.className = 'option-btn';
                     btn.innerText = opt.text;
+                    btn.dataset.correct = opt.isCorrect ? "true" : "false";
                     btn.onclick = () => checkObjective(btn, opt.isCorrect);
                     optionsArea.appendChild(btn);
                 }
@@ -174,6 +193,7 @@
             subjectiveArea.classList.remove('hidden');
             subjectiveInput.value = "";
             subjectiveInput.disabled = false;
+            subjectiveArea.querySelectorAll('button').forEach(btn => btn.disabled = false);
             subjectiveInput.focus();
         }
     }
@@ -185,20 +205,20 @@
         const feedback = document.getElementById('feedback');
 
         if(isCorrect) {
+            recordCurrentAnswer(true);
             btn.classList.add('correct');
             feedback.innerText = "정답입니다! ⭕";
             feedback.style.color = "#38a169";
             setTimeout(nextQuestion, 1000);
         } else {
+            recordCurrentAnswer(false);
             btn.classList.add('wrong');
-            feedback.innerText = "오답입니다! 다시 풀어보세요 ❌";
+            buttons.forEach(b => {
+                if(b.dataset.correct === "true") b.classList.add('correct');
+            });
+            feedback.innerText = `오답입니다! 정답은 "${getCorrectAnswerText()}" 입니다.`;
             feedback.style.color = "#e53e3e";
-            // 객관식은 틀리면 1.5초 뒤에 다시 고를 수 있게 풀어줍니다.
-            setTimeout(() => {
-                buttons.forEach(b => b.disabled = false);
-                btn.classList.remove('wrong');
-                feedback.innerText = "";
-            }, 1500);
+            document.getElementById('next-question-btn').classList.remove('hidden');
         }
     }
 
@@ -211,13 +231,18 @@
         const correctAnswer = String(quizData[currentIndex].answer).trim().toLowerCase();
 
         if(userAnswer === correctAnswer) {
+            recordCurrentAnswer(true);
             input.disabled = true;
             feedback.innerText = "정답입니다! ⭕";
             feedback.style.color = "#38a169";
             setTimeout(nextQuestion, 1000);
         } else {
-            feedback.innerText = "오답입니다! 다시 확인해 보세요 ❌";
+            recordCurrentAnswer(false);
+            input.disabled = true;
+            document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
+            feedback.innerText = `오답입니다! 정답은 "${String(quizData[currentIndex].answer).trim()}" 입니다.`;
             feedback.style.color = "#e53e3e";
+            document.getElementById('next-question-btn').classList.remove('hidden');
         }
     }
 
@@ -227,10 +252,41 @@
         const correctAnswer = String(quizData[currentIndex].answer).trim();
         
         input.value = correctAnswer; // 빈칸에 진짜 정답을 적어줍니다.
+        input.disabled = true;
+        document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
+        recordCurrentAnswer(false);
         
         const feedback = document.getElementById('feedback');
-        feedback.innerText = "💡 정답을 확인했습니다. [정답 확인]을 누르세요.";
-        feedback.style.color = "#d69e2e";
+        feedback.innerText = `정답은 "${correctAnswer}" 입니다.`;
+        feedback.style.color = "#e53e3e";
+        document.getElementById('next-question-btn').classList.remove('hidden');
+    }
+
+    function recordCurrentAnswer(isCorrect) {
+        const q = quizData[currentIndex];
+        if(q.answered) return;
+        q.answered = true;
+        q.userCorrect = isCorrect;
+    }
+
+    function getCorrectAnswerText() {
+        const q = quizData[currentIndex];
+        if(q.answer == "1") return q.c1;
+        if(q.answer == "2") return q.c2;
+        if(q.answer == "3") return q.c3;
+        if(q.answer == "4") return q.c4;
+        return String(q.answer).trim();
+    }
+
+    function getScoreCounts() {
+        const correctCount = quizData.filter(q => q.userCorrect === true).length;
+        const questionCount = quizData.length;
+        return {
+            correctCount: correctCount,
+            wrongCount: questionCount - correctCount,
+            questionCount: questionCount,
+            scoreText: `${correctCount} / ${questionCount}`
+        };
     }
 
     function nextQuestion() {
@@ -238,9 +294,47 @@
         if(currentIndex < quizData.length) {
             renderQuiz();
         } else {
+            const score = getScoreCounts();
             document.getElementById('main-layout').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
+            document.getElementById('score-text').innerText = `결과: ${score.questionCount}문제 중 ${score.correctCount}개 정답, ${score.wrongCount}개 오답`;
+            saveTestCompletion();
         }
+    }
+
+    function saveTestCompletion() {
+        if(testSaved) return;
+        testSaved = true;
+        const score = getScoreCounts();
+
+        const formData = new URLSearchParams({
+            action: 'saveTest',
+            studentName: studentName,
+            grade: selectedGrade,
+            subject: selectedSubject,
+            problemSet: problemSet,
+            questionCount: String(score.questionCount),
+            correctCount: String(score.correctCount),
+            wrongCount: String(score.wrongCount),
+            score: score.scoreText,
+            completed: 'TRUE'
+        });
+
+        fetch(scriptURL, {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        })
+        .then(() => {
+            document.getElementById('saving-msg').innerText = "✅ 완료 기록이 저장되었습니다!";
+            document.getElementById('saving-msg').style.color = "#38a169";
+        })
+        .catch(() => {
+            testSaved = false;
+            document.getElementById('saving-msg').innerText = "❌ 완료 기록 저장에 실패했습니다. 인터넷 연결 후 새로고침하지 말고 선생님께 알려주세요.";
+            document.getElementById('saving-msg').style.color = "red";
+        });
     }
 </script>
 </body>
