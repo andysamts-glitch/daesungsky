@@ -209,7 +209,7 @@
             btn.classList.add('correct');
             feedback.innerText = "정답입니다! ⭕";
             feedback.style.color = "#38a169";
-            setTimeout(nextQuestion, 1000);
+            document.getElementById('next-question-btn').classList.remove('hidden');
         } else {
             recordCurrentAnswer(false);
             btn.classList.add('wrong');
@@ -233,9 +233,10 @@
         if(userAnswer === correctAnswer) {
             recordCurrentAnswer(true);
             input.disabled = true;
+            document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
             feedback.innerText = "정답입니다! ⭕";
             feedback.style.color = "#38a169";
-            setTimeout(nextQuestion, 1000);
+            document.getElementById('next-question-btn').classList.remove('hidden');
         } else {
             recordCurrentAnswer(false);
             input.disabled = true;
