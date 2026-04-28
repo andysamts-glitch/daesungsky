@@ -93,34 +93,41 @@
 
             <hr style="border: 1px dashed #cbd5e0; margin-bottom: 25px;">
 
-            <p style="font-size: 20px; font-weight: bold; color: #2d3748; margin-bottom: 15px;">📝 내신/모의고사 문제 </p>
+            <p style="font-size: 20px; font-weight: bold; color: #2d3748; margin-bottom: 15px;">📝 내신/모의고사/시험 문제 </p>
             
-            <div class="btn-group" id="grade-btns">
+            <div class="btn-group" id="category-btns">
                 <p style="grid-column: span 2;">데이터를 불러오는 중입니다... ⏳</p>
             </div>
         </div>
 
         <div id="step2" class="hidden">
-            <h2>과목 선택</h2>
-            <p id="grade-title">선택한 학년: -</p>
-            <div class="btn-group" id="subject-btns"></div>
+            <h2>학년/시험 선택</h2>
+            <p id="category-title">선택한 분류: -</p>
+            <div class="btn-group" id="grade-btns"></div>
             <button class="back-btn full-width" onclick="goBack('step2', 'step1')">돌아가기</button>
         </div>
 
         <div id="step3" class="hidden">
-            <h2>문제 선택</h2>
-            <p id="subject-title">선택한 과목: -</p>
-            <div class="btn-group" id="problem-btns"></div>
+            <h2>과목 선택</h2>
+            <p id="grade-title">선택한 학년/시험: -</p>
+            <div class="btn-group" id="subject-btns"></div>
             <button class="back-btn full-width" onclick="goBack('step3', 'step2')">돌아가기</button>
         </div>
 
         <div id="step4" class="hidden">
+            <h2>문제 선택</h2>
+            <p id="subject-title">선택한 과목: -</p>
+            <div class="btn-group" id="problem-btns"></div>
+            <button class="back-btn full-width" onclick="goBack('step4', 'step3')">돌아가기</button>
+        </div>
+
+        <div id="step5" class="hidden">
             <h2>접속 암호</h2>
             <p id="problem-title">선택한 문제: -</p>
             <input type="text" id="student-name" placeholder="학생 이름">
             <input type="password" id="password-input" placeholder="4자리 암호" maxlength="4">
             <button class="full-width" style="width: 100%; margin-bottom: 10px;" onclick="checkPassword()">문제 풀기 시작</button>
-            <button class="back-btn full-width" style="width: 100%;" onclick="goBack('step4', 'step3')">돌아가기</button>
+            <button class="back-btn full-width" style="width: 100%;" onclick="goBack('step5', 'step4')">돌아가기</button>
         </div>
     </div>
 
@@ -130,17 +137,24 @@
 
         let db = {}; 
         let passwordDB = {}; 
+        let selectedCategory = "";
         let selectedGrade = "";
         let selectedSubject = "";
         let selectedProblem = "";
 
+        const gradeGroups = [
+            { name: "중등", grades: ["중1", "중2", "중3"] },
+            { name: "고등", grades: ["고1", "고2", "고3"] },
+            { name: "시험대비", grades: ["TOEFL", "SAT"] }
+        ];
+
         window.onload = function() {
-            const gradeDiv = document.getElementById('grade-btns');
+            const categoryDiv = document.getElementById('category-btns');
 
             fetch(scriptURL)
             .then(response => response.json())
             .then(data => {
-                gradeDiv.innerHTML = ""; 
+                categoryDiv.innerHTML = ""; 
                 
                 data.forEach(item => {
                     if (!db[item.grade]) db[item.grade] = {};
@@ -154,30 +168,65 @@
                     passwordDB[key] = item.password;
                 });
 
-                let hasData = false;
-                for (let grade in db) {
-                    hasData = true;
-                    gradeDiv.innerHTML += `<button onclick="selectGrade('${grade}')">${grade}</button>`;
-                }
-                
-                if(!hasData) {
-                    gradeDiv.innerHTML = "<p style='grid-column: span 2;'>아직 등록된 문제가 없습니다.</p>";
-                }
+                renderCategoryButtons();
             })
             .catch(error => {
-                gradeDiv.innerHTML = "<p style='grid-column: span 2; color: red;'>데이터를 불러오지 못했습니다. 새로고침 해주세요.</p>";
+                categoryDiv.innerHTML = "<p style='grid-column: span 2; color: red;'>데이터를 불러오지 못했습니다. 새로고침 해주세요.</p>";
             });
+        }
+
+        function renderCategoryButtons() {
+            const categoryDiv = document.getElementById('category-btns');
+            categoryDiv.innerHTML = "";
+
+            let hasData = false;
+            gradeGroups.forEach(group => {
+                const availableGrades = group.grades.filter(grade => db[grade]);
+                if (availableGrades.length > 0) {
+                    hasData = true;
+                    categoryDiv.innerHTML += `<button onclick="selectCategory('${group.name}')">${group.name}</button>`;
+                }
+            });
+
+            const groupedGrades = gradeGroups.flatMap(group => group.grades);
+            const extraGrades = Object.keys(db).filter(grade => !groupedGrades.includes(grade));
+            if (extraGrades.length > 0) {
+                hasData = true;
+                categoryDiv.innerHTML += `<button onclick="selectCategory('기타')">기타</button>`;
+            }
+
+            if(!hasData) {
+                categoryDiv.innerHTML = "<p style='grid-column: span 2;'>아직 등록된 문제가 없습니다.</p>";
+            }
+        }
+
+        function selectCategory(category) {
+            selectedCategory = category;
+            document.getElementById('category-title').innerText = "선택한 분류: " + category;
+            const gradeDiv = document.getElementById('grade-btns');
+            gradeDiv.innerHTML = "";
+
+            const group = gradeGroups.find(item => item.name === category);
+            const grades = group
+                ? group.grades.filter(grade => db[grade])
+                : Object.keys(db).filter(grade => !gradeGroups.flatMap(item => item.grades).includes(grade));
+
+            grades.forEach(grade => {
+                gradeDiv.innerHTML += `<button onclick="selectGrade('${grade}')">${grade}</button>`;
+            });
+
+            changeScreen('step1', 'step2');
         }
 
         function selectGrade(grade) {
             selectedGrade = grade;
-            document.getElementById('grade-title').innerText = "선택한 학년: " + grade;
+            document.getElementById('grade-title').innerText = "선택한 학년/시험: " + grade;
             const subjectDiv = document.getElementById('subject-btns');
             subjectDiv.innerHTML = ""; 
             for (let subject in db[grade]) {
                 subjectDiv.innerHTML += `<button onclick="selectSubject('${subject}')">${subject}</button>`;
             }
-            changeScreen('step1', 'step2');
+            changeScreen('step2', 'step3');
         }
 
         function selectSubject(subject) {
@@ -190,13 +239,13 @@
             for (let i = 0; i < problems.length; i++) {
                 problemDiv.innerHTML += `<button onclick="selectProblem('${problems[i]}')">${problems[i]}</button>`;
             }
-            changeScreen('step2', 'step3');
+            changeScreen('step3', 'step4');
         }
 
         function selectProblem(problem) {
             selectedProblem = problem;
             document.getElementById('problem-title').innerText = "선택한 문제: " + problem;
-            changeScreen('step3', 'step4');
+            changeScreen('step4', 'step5');
         }
 
         function changeScreen(hideId, showId) {
