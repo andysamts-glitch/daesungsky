@@ -120,7 +120,7 @@
 
         document.getElementById('test-title').innerText = problemSet + " 풀이";
 
-        fetch(`${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}`)
+        fetch(`${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}`)
         .then(res => res.json())
         .then(data => {
             document.getElementById('loading').classList.add('hidden');

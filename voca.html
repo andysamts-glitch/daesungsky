@@ -135,10 +135,10 @@
         document.getElementById('day-label').innerHTML =
             subjectType === '교과서' ? '<b>📚 학습할 과목 선택</b>' : '<b>📅 학습할 Day 선택</b>';
 
-        fetch(`${scriptURL}?action=getVoca&t=${new Date().getTime()}`)
+        fetch(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&t=${new Date().getTime()}`)
         .then(res => res.json())
         .then(data => {
-            allVocaData = data.filter(item => String(item.subject).trim() === String(subjectType).trim());
+            allVocaData = data;
             
             let days = [...new Set(allVocaData.map(item => item.day))].sort((a,b) => a-b);
             let daySelect = document.getElementById('day-select');
