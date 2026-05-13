@@ -104,7 +104,9 @@
         "토플": "ZHNza3k=",    
         "토익": "ZHNza3k=",  
         "SAT": "ZHNzYXQx",     
-        "교과서": "ZHN0ZXh0MQ==",    
+        "교과서_중등": "ZHN0ZXh0MQ==",
+        "교과서_고등": "ZHN0ZXh0MQ==",
+        "교과서": "ZHN0ZXh0MQ==",
         "기본": "cGFzcw=="     // 위 목록에 없는 과목을 눌렀을 때의 기본 암호: pass
     };
 
@@ -131,9 +133,9 @@
             subjectType = '토플'; 
         }
 
-        document.getElementById('title-text').innerText = `${subjectType} 단어 테스트`;
+        document.getElementById('title-text').innerText = `${getSubjectDisplayName()} 단어 테스트`;
         document.getElementById('day-label').innerHTML =
-            subjectType === '교과서' ? '<b>📚 학습할 과목 선택</b>' : '<b>📅 학습할 Day 선택</b>';
+            isTextbookSubject() ? '<b>📚 학습할 과목 선택</b>' : '<b>📅 학습할 Day 선택</b>';
 
         fetch(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&t=${new Date().getTime()}`)
         .then(res => res.json())
@@ -144,7 +146,7 @@
             let daySelect = document.getElementById('day-select');
             daySelect.innerHTML = "";
             days.forEach(d => {
-                const optionText = subjectType === '교과서' ? `${d}` : `Day ${d}`;
+                const optionText = isTextbookSubject() ? `${d}` : `Day ${d}`;
                 daySelect.innerHTML += `<option value="${d}">${optionText}</option>`;
             });
 
@@ -329,8 +331,8 @@
             wrongContainer.classList.add('hidden');
         }
 
-        const subjectDayLabel = subjectType === '교과서'
-            ? `${subjectType} 과목 ${selectedDay}`
+        const subjectDayLabel = isTextbookSubject()
+            ? `${getSubjectDisplayName()} 과목 ${selectedDay}`
             : `${subjectType} Day ${selectedDay}`;
 
         const formData = `action=saveScore&studentName=${encodeURIComponent(studentName)}&subjectDay=${encodeURIComponent(subjectDayLabel)}&range=${encodeURIComponent(selectedRange)}&score=${encodeURIComponent(finalScoreText)}`;
@@ -348,6 +350,16 @@
             document.getElementById('saving-msg').innerText = "❌ 성적 저장에 실패했습니다.";
             document.getElementById('saving-msg').style.color = "red";
         });
+    }
+
+    function isTextbookSubject() {
+        return subjectType === '교과서' || subjectType === '교과서_중등' || subjectType === '교과서_고등';
+    }
+
+    function getSubjectDisplayName() {
+        if (subjectType === '교과서_중등') return '중등 교과서';
+        if (subjectType === '교과서_고등') return '고등 교과서';
+        return subjectType;
     }
 </script>
 </body>
