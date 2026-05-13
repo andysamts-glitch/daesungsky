@@ -25,9 +25,9 @@
         }
 
         .full-width { grid-column: span 2; }
-        .voca-grid { display: flex; flex-direction: column; align-items: center; gap: 10px; max-height: none; overflow: visible; }
-        .voca-row { display: flex; justify-content: center; gap: 10px; width: 100%; }
-        .voca-row button { width: 31%; min-width: 0; padding-left: 8px; padding-right: 8px; }
+        .voca-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: none; overflow: visible; }
+        .voca-half { grid-column: span 2; }
+        .voca-quarter { grid-column: span 1; padding-left: 8px; padding-right: 8px; }
 
         button { padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; background-color: #2b6cb0; color: white; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #1a365d; }
@@ -86,15 +86,11 @@
             <div style="background-color: #edf2f7; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
                 <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 15px;">📚 단어 연습</h3>
                 <div class="voca-grid">
-                    <div class="voca-row">
-                        <button onclick="location.href='voca.html?type=toefl'" style="background-color: #dd6b20;">TOEFL 단어</button>
-                        <button onclick="location.href='voca.html?type=toeic'" style="background-color: #3182ce;">TOEIC 단어</button>
-                    </div>
-                    <div class="voca-row">
-                        <button onclick="location.href='voca.html?type=SAT'" style="background-color: #38a169;">SAT 단어</button>
-                        <button onclick="location.href='voca.html?type=교과서_중등'" style="background-color: #805ad5;">중등 단어</button>
-                        <button onclick="location.href='voca.html?type=교과서_고등'" style="background-color: #6b46c1;">고등 단어</button>
-                    </div>
+                    <button class="voca-half" onclick="location.href='voca.html?type=toefl'" style="background-color: #dd6b20;">TOEFL 단어</button>
+                    <button class="voca-half" onclick="location.href='voca.html?type=toeic'" style="background-color: #3182ce;">TOEIC 단어</button>
+                    <button class="voca-half" onclick="location.href='voca.html?type=SAT'" style="background-color: #38a169;">SAT 단어</button>
+                    <button class="voca-quarter" onclick="location.href='voca.html?type=교과서_중등'" style="background-color: #805ad5;">중등</button>
+                    <button class="voca-quarter" onclick="location.href='voca.html?type=교과서_고등'" style="background-color: #6b46c1;">고등</button>
                 </div>
             </div>
 
