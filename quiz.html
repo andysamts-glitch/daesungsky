@@ -72,7 +72,6 @@
         <div id="subjective-area" class="hidden">
             <input type="text" id="subjective-input" placeholder="정답을 입력하세요" onkeypress="if(event.key==='Enter') checkSubjective()">
             <button class="submit-btn" onclick="checkSubjective()">정답 제출</button>
-            <button class="hint-btn" onclick="showAnswer()">💡 답을 모르겠어요 (정답 보기)</button>
         </div>
         
         <div id="feedback" style="text-align: center; min-height: 30px; font-weight: bold; margin-top: 15px; font-size: 18px; line-height: 1.5;"></div>
@@ -249,22 +248,6 @@
             feedback.style.color = "#e53e3e";
             document.getElementById('next-question-btn').classList.remove('hidden');
         }
-    }
-
-    // 🌟 주관식 정답 보기 힌트 버튼!
-    function showAnswer() {
-        const input = document.getElementById('subjective-input');
-        const correctAnswer = String(quizData[currentIndex].answer).trim();
-        
-        input.value = correctAnswer; // 빈칸에 진짜 정답을 적어줍니다.
-        input.disabled = true;
-        document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
-        recordCurrentAnswer(false);
-        
-        const feedback = document.getElementById('feedback');
-        feedback.innerText = `정답은 "${correctAnswer}" 입니다.`;
-        feedback.style.color = "#e53e3e";
-        document.getElementById('next-question-btn').classList.remove('hidden');
     }
 
     function recordCurrentAnswer(isCorrect) {
