@@ -9,13 +9,14 @@
         .header { text-align: center; margin-bottom: 20px; }
         
         /* 레이아웃 (페세지가 있을 때와 없을 때 자동 변경) */
-        .layout-container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
-        .passage-box { flex: 1; min-width: 300px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.8; font-size: 18px; overflow-y: auto; max-height: 70vh; }
-        .passage-paragraph { display: grid; grid-template-columns: 38px 1fr; gap: 10px; margin-bottom: 18px; text-align: left; }
+        .layout-container { display: flex; align-items: stretch; gap: 20px; max-width: 1280px; margin: 0 auto; flex-wrap: wrap; }
+        .passage-box { flex: 1.25; min-width: 360px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.8; font-size: 18px; overflow-y: auto; max-height: 78vh; }
+        .passage-paragraph { margin-bottom: 18px; text-align: left; }
         .passage-paragraph:last-child { margin-bottom: 0; }
-        .paragraph-number { color: #2b6cb0; font-weight: bold; text-align: right; user-select: none; }
+        .passage-title { font-size: 20px; font-weight: bold; color: #1a365d; margin-bottom: 18px; text-align: left; line-height: 1.5; }
+        .paragraph-number { display: inline-block; color: #2b6cb0; font-weight: bold; margin-right: 8px; user-select: none; }
         .paragraph-body { white-space: pre-wrap; }
-        .quiz-box { flex: 1; min-width: 300px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .quiz-box { flex: 1; min-width: 320px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
         /* 🌟 페세지가 없을 때 퀴즈 박스를 예쁘게 중앙으로 모아주는 마법! */
         .no-passage { max-width: 600px; margin: 0 auto; flex: none; width: 100%; }
@@ -46,6 +47,7 @@
         /* 모바일 세로 모드 대응 */
         @media (max-width: 768px) {
             .layout-container { flex-direction: column; }
+            .passage-box, .quiz-box { min-width: 0; width: auto; }
             .passage-box { max-height: 40vh; }
         }
     </style>
@@ -154,29 +156,33 @@
     function renderPassage(passage) {
         const passageText = document.getElementById('passage-text');
         const normalized = String(passage || "").replace(/\r\n/g, "\n").trim();
-        const rawParagraphs = normalized.includes("\n\n")
-            ? normalized.split(/\n\s*\n/)
-            : normalized.split(/\n/);
+        const rawParagraphs = normalized.split(/\n\s*\n|\n/);
         const paragraphs = rawParagraphs.map(p => p.trim()).filter(Boolean);
 
         passageText.innerHTML = "";
 
+        let paragraphNumber = 1;
+
         paragraphs.forEach((paragraph, index) => {
-            const row = document.createElement('div');
-            row.className = 'passage-paragraph';
+            if (isPassageTitle(paragraph, index, paragraphs.length)) {
+                const titleEl = document.createElement('div');
+                titleEl.className = 'passage-title';
+                titleEl.innerHTML = formatPassageMarkup(paragraph.replace(/^#\s*/, ''));
+                passageText.appendChild(titleEl);
+                paragraphNumber = 1;
+                return;
+            }
 
-            const number = document.createElement('div');
-            number.className = 'paragraph-number';
-            number.innerText = `${index + 1}.`;
-
-            const body = document.createElement('div');
-            body.className = 'paragraph-body';
-            body.innerHTML = formatPassageMarkup(paragraph);
-
-            row.appendChild(number);
-            row.appendChild(body);
+            const row = document.createElement('p');
+            row.className = 'passage-paragraph paragraph-body';
+            row.innerHTML = `<span class="paragraph-number">${paragraphNumber}.</span>${formatPassageMarkup(paragraph)}`;
             passageText.appendChild(row);
+            paragraphNumber++;
         });
+    }
+
+    function isPassageTitle(paragraph, index, totalCount) {
+        return paragraph.startsWith('#') || (index === 0 && totalCount > 1);
     }
 
     function formatPassageMarkup(text) {
