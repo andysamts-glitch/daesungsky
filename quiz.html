@@ -10,9 +10,11 @@
         
         /* 레이아웃 (페세지가 있을 때와 없을 때 자동 변경) */
         .layout-container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
-        .passage-box { flex: 1; min-width: 300px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.6; font-size: 16px; overflow-y: auto; max-height: 70vh; } #passage-text {
-    white-space: pre-wrap;
-}
+        .passage-box { flex: 1; min-width: 300px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.8; font-size: 18px; overflow-y: auto; max-height: 70vh; }
+        .passage-paragraph { display: grid; grid-template-columns: 38px 1fr; gap: 10px; margin-bottom: 18px; text-align: left; }
+        .passage-paragraph:last-child { margin-bottom: 0; }
+        .paragraph-number { color: #2b6cb0; font-weight: bold; text-align: right; user-select: none; }
+        .paragraph-body { white-space: pre-wrap; }
         .quiz-box { flex: 1; min-width: 300px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
         /* 🌟 페세지가 없을 때 퀴즈 박스를 예쁘게 중앙으로 모아주는 마법! */
@@ -132,7 +134,7 @@
                 document.getElementById('passage-container').classList.add('hidden');
                 document.getElementById('quiz-container').classList.add('no-passage'); // 중앙 정렬 클래스 추가
             } else {
-                document.getElementById('passage-text').textContent = data.passage;
+                renderPassage(data.passage);
             }
 
             quizData = data.questions;
@@ -148,6 +150,49 @@
             document.getElementById('loading').innerText = "데이터를 불러오는 데 실패했습니다. 새로고침 해주세요.";
         });
     };
+
+    function renderPassage(passage) {
+        const passageText = document.getElementById('passage-text');
+        const normalized = String(passage || "").replace(/\r\n/g, "\n").trim();
+        const rawParagraphs = normalized.includes("\n\n")
+            ? normalized.split(/\n\s*\n/)
+            : normalized.split(/\n/);
+        const paragraphs = rawParagraphs.map(p => p.trim()).filter(Boolean);
+
+        passageText.innerHTML = "";
+
+        paragraphs.forEach((paragraph, index) => {
+            const row = document.createElement('div');
+            row.className = 'passage-paragraph';
+
+            const number = document.createElement('div');
+            number.className = 'paragraph-number';
+            number.innerText = `${index + 1}.`;
+
+            const body = document.createElement('div');
+            body.className = 'paragraph-body';
+            body.innerHTML = formatPassageMarkup(paragraph);
+
+            row.appendChild(number);
+            row.appendChild(body);
+            passageText.appendChild(row);
+        });
+    }
+
+    function formatPassageMarkup(text) {
+        return escapeHtml(text)
+            .replace(/&lt;u&gt;/gi, '<u>')
+            .replace(/&lt;\/u&gt;/gi, '</u>');
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
     function renderQuiz() {
         const q = quizData[currentIndex];
