@@ -9,17 +9,17 @@
         .header { text-align: center; margin-bottom: 20px; }
         
         /* 레이아웃 (페세지가 있을 때와 없을 때 자동 변경) */
-        .layout-container { display: flex; align-items: stretch; gap: 20px; max-width: 1280px; margin: 0 auto; flex-wrap: wrap; }
-        .passage-box { flex: 1.25; min-width: 360px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.8; font-size: 18px; overflow-y: auto; max-height: 78vh; }
+        .layout-container { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: stretch; gap: 20px; max-width: 1280px; height: calc(100svh - 145px); min-height: 520px; margin: 0 auto; }
+        .passage-box { min-width: 0; min-height: 0; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.8; font-size: 18px; overflow-y: auto; }
         .passage-paragraph { margin-bottom: 18px; text-align: left; }
         .passage-paragraph:last-child { margin-bottom: 0; }
         .passage-title { font-size: 20px; font-weight: bold; color: #1a365d; margin-bottom: 18px; text-align: left; line-height: 1.5; }
         .paragraph-number { display: inline-block; color: #2b6cb0; font-weight: bold; margin-right: 8px; user-select: none; }
         .paragraph-body { white-space: pre-wrap; }
-        .quiz-box { flex: 1; min-width: 320px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .quiz-box { min-width: 0; min-height: 0; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow-y: auto; }
         
         /* 🌟 페세지가 없을 때 퀴즈 박스를 예쁘게 중앙으로 모아주는 마법! */
-        .no-passage { max-width: 600px; margin: 0 auto; flex: none; width: 100%; }
+        .no-passage { grid-column: 1 / -1; justify-self: center; max-width: 600px; width: 100%; }
 
         h2 { color: #1a365d; margin-top: 0; }
         .progress { text-align: right; font-weight: bold; color: #718096; margin-bottom: 15px; }
@@ -45,10 +45,18 @@
         .hidden { display: none !important; }
         
         /* 모바일 세로 모드 대응 */
-        @media (max-width: 768px) {
-            .layout-container { flex-direction: column; }
-            .passage-box, .quiz-box { min-width: 0; width: auto; }
-            .passage-box { max-height: none; overflow-y: visible; }
+        @media (max-width: 768px) and (orientation: portrait) {
+            .layout-container { display: flex; flex-direction: column; height: auto; min-height: 0; }
+            .passage-box, .quiz-box { min-width: 0; width: auto; overflow-y: visible; }
+            .passage-box { max-height: 46svh; overflow-y: auto; }
+        }
+
+        @media (orientation: landscape) and (max-height: 520px) {
+            body { padding: 12px; }
+            .header { margin-bottom: 10px; }
+            .header h1 { margin: 0 0 8px 0; font-size: 24px; }
+            .layout-container { height: calc(100svh - 82px); min-height: 0; }
+            .passage-box, .quiz-box { padding: 20px; }
         }
     </style>
 </head>
