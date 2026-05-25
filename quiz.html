@@ -196,6 +196,10 @@
 
     function formatPassageMarkup(text) {
         return escapeHtml(text)
+            .replace(/&amp;lt;u&amp;gt;/gi, '<u>')
+            .replace(/&amp;lt;\/u&amp;gt;/gi, '</u>')
+            .replace(/&amp;lt;mark&amp;gt;/gi, '<mark>')
+            .replace(/&amp;lt;\/mark&amp;gt;/gi, '</mark>')
             .replace(/&lt;u&gt;/gi, '<u>')
             .replace(/&lt;\/u&gt;/gi, '</u>')
             .replace(/&lt;mark&gt;/gi, '<mark>')
