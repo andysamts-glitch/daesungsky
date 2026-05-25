@@ -16,6 +16,7 @@
         .passage-title { font-size: 20px; font-weight: bold; color: #1a365d; margin-bottom: 18px; text-align: left; line-height: 1.5; }
         .paragraph-number { display: inline-block; color: #2b6cb0; font-weight: bold; margin-right: 8px; user-select: none; }
         .paragraph-body { white-space: pre-wrap; }
+        mark { background-color: #e9edf3; padding: 0 2px; border-radius: 3px; }
         .quiz-box { min-width: 0; min-height: 0; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow-y: auto; }
         
         /* 🌟 페세지가 없을 때 퀴즈 박스를 예쁘게 중앙으로 모아주는 마법! */
@@ -196,7 +197,9 @@
     function formatPassageMarkup(text) {
         return escapeHtml(text)
             .replace(/&lt;u&gt;/gi, '<u>')
-            .replace(/&lt;\/u&gt;/gi, '</u>');
+            .replace(/&lt;\/u&gt;/gi, '</u>')
+            .replace(/&lt;mark&gt;/gi, '<mark>')
+            .replace(/&lt;\/mark&gt;/gi, '</mark>');
     }
 
     function escapeHtml(text) {
