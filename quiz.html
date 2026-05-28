@@ -296,10 +296,10 @@
         const feedback = document.getElementById('feedback');
         
         // 띄어쓰기나 대소문자 때문에 틀리지 않도록 보정
-        const userAnswer = input.value.trim().toLowerCase();
-        const correctAnswer = String(quizData[currentIndex].answer).trim().toLowerCase();
+        const userAnswer = input.value.trim();
+        const correctAnswer = String(quizData[currentIndex].answer).trim();
 
-        if(userAnswer === correctAnswer) {
+        if(isSubjectiveAnswerCorrect(userAnswer, correctAnswer)) {
             recordCurrentAnswer(true);
             input.disabled = true;
             document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
@@ -314,6 +314,40 @@
             feedback.style.color = "#e53e3e";
             document.getElementById('next-question-btn').classList.remove('hidden');
         }
+    }
+
+    function isSubjectiveAnswerCorrect(userAnswer, correctAnswer) {
+        const normalizedCorrect = normalizeAnswerText(correctAnswer);
+        const normalizedUser = normalizeAnswerText(userAnswer);
+
+        if (!normalizedCorrect) return normalizedUser === normalizedCorrect;
+
+        if (correctAnswer.includes('/')) {
+            const correctParts = splitOrderedAnswer(correctAnswer);
+            const userParts = splitOrderedAnswer(userAnswer);
+
+            if (correctParts.length !== userParts.length) return false;
+
+            return correctParts.every((part, index) => part === userParts[index]);
+        }
+
+        return normalizedUser === normalizedCorrect;
+    }
+
+    function splitOrderedAnswer(answer) {
+        return String(answer)
+            .trim()
+            .toLowerCase()
+            .split(/\s*\/\s*|\s*,\s*|\s+/)
+            .map(part => normalizeAnswerText(part))
+            .filter(Boolean);
+    }
+
+    function normalizeAnswerText(answer) {
+        return String(answer)
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
     }
 
     function recordCurrentAnswer(isCorrect) {
