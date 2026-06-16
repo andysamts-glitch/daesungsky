@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대성 SKY 평균·평점 계산기</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #f4f6f9;
+            color: #1f2937;
+        }
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px 12px;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+            margin-bottom: 10px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .logo {
+            width: 66px;
+            height: auto;
+            flex: 0 0 auto;
+        }
+        h1 {
+            margin: 0;
+            color: #1a365d;
+            font-size: 21px;
+            line-height: 1.2;
+        }
+        .subtitle {
+            margin: 3px 0 0 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+        .home-btn, .tool-btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 8px 11px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            background: #2b6cb0;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .home-btn:hover, .tool-btn:hover { background: #1a365d; }
+        .tool-btn.secondary { background: #718096; }
+        .tool-btn.secondary:hover { background: #4a5568; }
+        .calculator {
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+        }
+        .sheet-title {
+            width: 43%;
+            min-width: 230px;
+            margin: 0 0 8px auto;
+            padding: 7px 10px;
+            border: 1px solid #b7c7d8;
+            background: #1f4e78;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+        }
+        .toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .table-wrap {
+            border: 1px solid #b7c7d8;
+            background: #fff;
+            overflow-x: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            background: #fff;
+        }
+        col.subject-col { width: 16%; }
+        col.score-col { width: 8.5%; }
+        col.calc-col { width: 9.2%; }
+        col.final-col { width: 12%; }
+        th, td {
+            border: 1px solid #b7c7d8;
+            padding: 0;
+            height: 33px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 12px;
+        }
+        thead th {
+            height: 37px;
+            padding: 3px 1px;
+            color: #1f2937;
+            font-weight: 800;
+            line-height: 1.12;
+        }
+        .subject-head { background: #d9eaf7; }
+        .score-head { background: #eaf3f8; }
+        .avg12-head { background: #e2f0d9; }
+        .avg34-head { background: #fce4d6; }
+        .final-head { background: #fff2cc; }
+        input {
+            width: 100%;
+            height: 32px;
+            border: 0;
+            border-radius: 0;
+            padding: 0 2px;
+            margin: 0;
+            font-size: 13px;
+            line-height: 32px;
+            text-align: center;
+            background: transparent;
+            color: #1f2937;
+            appearance: textfield;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            margin: 0;
+            appearance: none;
+        }
+        input.subject {
+            text-align: left;
+            padding-left: 5px;
+            background: #f7f9fb;
+        }
+        input.score-input { background: #fff; }
+        input.invalid {
+            background: #fff5f5;
+            outline: 2px solid #e53e3e;
+            outline-offset: -2px;
+        }
+        .result-cell {
+            background: #fff;
+            color: #1a365d;
+            font-weight: 800;
+        }
+        .final-cell {
+            background: #fff9e6;
+            color: #7a4d00;
+            font-weight: 900;
+        }
+        .summary-row td {
+            background: #1f4e78;
+            color: #fff;
+            font-weight: 800;
+        }
+        .criteria {
+            margin: 8px 0 0 0;
+            border: 1px solid #b7c7d8;
+            padding: 6px 8px;
+            background: #f2f2f2;
+            color: #4a5568;
+            text-align: left;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        @media (max-width: 520px) {
+            body { padding: 8px; }
+            .topbar { padding: 10px; }
+            .logo { width: 60px; }
+            h1 { font-size: 18px; }
+            .subtitle { display: none; }
+            .calculator { padding: 7px; }
+            .sheet-title {
+                width: 100%;
+                min-width: 0;
+                font-size: 15px;
+            }
+            th, td { font-size: 10.5px; height: 31px; }
+            thead th { height: 34px; }
+            input {
+                height: 30px;
+                line-height: 30px;
+                font-size: 12px;
+            }
+            .home-btn, .tool-btn {
+                font-size: 13px;
+                padding: 8px 9px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div class="brand">
+                <img src="작은로고.jpg" alt="대성 SKY 학원 로고" class="logo">
+                <div>
+                    <h1>평균·평점 계산기</h1>
+                    <p class="subtitle">엑셀과 같은 방식으로 점수 평균을 평점으로 바꿉니다.</p>
+                </div>
+            </div>
+            <button class="home-btn" type="button" onclick="location.href='index.html'">홈으로</button>
+        </header>
+
+        <section class="calculator">
+            <div class="sheet-title">과목별 평점 계산기</div>
+            <div class="toolbar">
+                <button class="tool-btn secondary" type="button" id="clear-btn">초기화</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <colgroup>
+                        <col class="subject-col">
+                        <col class="score-col">
+                        <col class="score-col">
+                        <col class="calc-col">
+                        <col class="calc-col">
+                        <col class="score-col">
+                        <col class="score-col">
+                        <col class="calc-col">
+                        <col class="calc-col">
+                        <col class="final-col">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="subject-head">과목</th>
+                            <th class="score-head">1회</th>
+                            <th class="score-head">2회</th>
+                            <th class="avg12-head">1·2<br>평균</th>
+                            <th class="avg12-head">1·2<br>평점</th>
+                            <th class="score-head">3회</th>
+                            <th class="score-head">4회</th>
+                            <th class="avg34-head">3·4<br>평균</th>
+                            <th class="avg34-head">3·4<br>평점</th>
+                            <th class="final-head">최종<br>평균</th>
+                        </tr>
+                    </thead>
+                    <tbody id="score-body"></tbody>
+                    <tfoot>
+                        <tr class="summary-row">
+                            <td colspan="3">평점평균</td>
+                            <td>1·2 평균평점</td>
+                            <td id="avg-rating-12">-</td>
+                            <td colspan="2"></td>
+                            <td>3·4 평균평점</td>
+                            <td id="avg-rating-34">-</td>
+                            <td id="final-rating">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="criteria">평점 기준: 85점 이상=5, 70점 이상=4, 55점 이상=3, 40점 이상=2, 30점 이상=1</p>
+        </section>
+    </main>
+
+    <script>
+        const ROW_COUNT = 17;
+        const STORAGE_KEY = "dssky-grade-calculator-v7";
+        const OLD_STORAGE_KEYS = [
+            "dssky-grade-calculator-v6",
+            "dssky-grade-calculator-v4",
+            "dssky-grade-calculator-v3",
+            "dssky-grade-calculator-v1"
+        ];
+        const scoreBody = document.getElementById("score-body");
+
+        function makeEmptyRow() {
+            return { subject: "", s1: "", s2: "", s3: "", s4: "" };
+        }
+
+        function normalizeRow(row) {
+            return {
+                subject: row?.subject || "",
+                s1: row?.s1 || "",
+                s2: row?.s2 || "",
+                s3: row?.s3 || "",
+                s4: row?.s4 || ""
+            };
+        }
+
+        function getInitialRows() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+                if (Array.isArray(saved) && saved.length) {
+                    return Array.from({ length: ROW_COUNT }, (_, index) => normalizeRow(saved[index]));
+                }
+
+                for (const key of OLD_STORAGE_KEYS) {
+                    const oldSaved = JSON.parse(localStorage.getItem(key) || "[]");
+                    if (Array.isArray(oldSaved) && oldSaved.length) {
+                        return Array.from({ length: ROW_COUNT }, (_, index) => normalizeRow(oldSaved[index]));
+                    }
+                }
+            } catch (error) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+            return Array.from({ length: ROW_COUNT }, makeEmptyRow);
+        }
+
+        let rows = getInitialRows();
+
+        function renderRows() {
+            scoreBody.innerHTML = rows.map((row, index) => `
+                <tr data-index="${index}">
+                    <td><input class="subject" data-field="subject" type="text" value="${escapeHtml(row.subject)}"></td>
+                    <td><input class="score-input" data-field="s1" type="number" min="0" max="100" inputmode="decimal" value="${escapeHtml(row.s1)}"></td>
+                    <td><input class="score-input" data-field="s2" type="number" min="0" max="100" inputmode="decimal" value="${escapeHtml(row.s2)}"></td>
+                    <td class="result-cell" data-result="avg12">-</td>
+                    <td class="result-cell" data-result="rating12">-</td>
+                    <td><input class="score-input" data-field="s3" type="number" min="0" max="100" inputmode="decimal" value="${escapeHtml(row.s3)}"></td>
+                    <td><input class="score-input" data-field="s4" type="number" min="0" max="100" inputmode="decimal" value="${escapeHtml(row.s4)}"></td>
+                    <td class="result-cell" data-result="avg34">-</td>
+                    <td class="result-cell" data-result="rating34">-</td>
+                    <td class="result-cell final-cell" data-result="final">-</td>
+                </tr>
+            `).join("");
+            recalculate();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;");
+        }
+
+        function parseScore(value) {
+            if (value === "" || value === null || value === undefined) return null;
+            const number = Number(value);
+            if (!Number.isFinite(number) || number < 0 || number > 100) return null;
+            return number;
+        }
+
+        function average(values) {
+            const valid = values.filter(value => value !== null);
+            if (!valid.length) return null;
+            return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+        }
+
+        function ratingFromAverage(value) {
+            if (value === null) return null;
+            if (value >= 85) return 5;
+            if (value >= 70) return 4;
+            if (value >= 55) return 3;
+            if (value >= 40) return 2;
+            if (value >= 30) return 1;
+            return null;
+        }
+
+        function formatNumber(value) {
+            if (value === null) return "-";
+            return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+        }
+
+        function setResult(rowElement, key, value) {
+            rowElement.querySelector(`[data-result="${key}"]`).textContent = formatNumber(value);
+        }
+
+        function recalculate() {
+            const rating12Values = [];
+            const rating34Values = [];
+            const finalValues = [];
+
+            scoreBody.querySelectorAll("tr").forEach((rowElement, index) => {
+                const row = rows[index];
+                const s1 = parseScore(row.s1);
+                const s2 = parseScore(row.s2);
+                const s3 = parseScore(row.s3);
+                const s4 = parseScore(row.s4);
+                const avg12 = average([s1, s2]);
+                const rating12 = ratingFromAverage(avg12);
+                const avg34 = average([s3, s4]);
+                const rating34 = ratingFromAverage(avg34);
+                const final = average([rating12, rating34]);
+
+                setResult(rowElement, "avg12", avg12);
+                setResult(rowElement, "rating12", rating12);
+                setResult(rowElement, "avg34", avg34);
+                setResult(rowElement, "rating34", rating34);
+                setResult(rowElement, "final", final);
+
+                if (rating12 !== null) rating12Values.push(rating12);
+                if (rating34 !== null) rating34Values.push(rating34);
+                if (final !== null) finalValues.push(final);
+            });
+
+            document.getElementById("avg-rating-12").textContent = formatNumber(average(rating12Values));
+            document.getElementById("avg-rating-34").textContent = formatNumber(average(rating34Values));
+            document.getElementById("final-rating").textContent = formatNumber(average(finalValues));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+        }
+
+        function markValidity(input) {
+            if (!input.classList.contains("score-input")) return;
+            const value = input.value;
+            const valid = value === "" || parseScore(value) !== null;
+            input.classList.toggle("invalid", !valid);
+        }
+
+        scoreBody.addEventListener("input", event => {
+            const input = event.target;
+            const rowElement = input.closest("tr");
+            if (!rowElement) return;
+
+            const index = Number(rowElement.dataset.index);
+            const field = input.dataset.field;
+            rows[index][field] = input.value;
+            markValidity(input);
+            recalculate();
+        });
+
+        document.getElementById("clear-btn").addEventListener("click", () => {
+            if (!confirm("입력한 내용을 모두 지울까요?")) return;
+            rows = Array.from({ length: ROW_COUNT }, makeEmptyRow);
+            localStorage.removeItem(STORAGE_KEY);
+            renderRows();
+        });
+
+        renderRows();
+    </script>
+</body>
+</html>
