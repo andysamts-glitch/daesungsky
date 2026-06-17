@@ -285,7 +285,7 @@
             buttons.forEach(b => {
                 if(b.dataset.correct === "true") b.classList.add('correct');
             });
-            feedback.innerText = `오답입니다! 정답은 "${getCorrectAnswerText()}" 입니다.`;
+            feedback.innerText = getWrongFeedbackText();
             feedback.style.color = "#e53e3e";
             document.getElementById('next-question-btn').classList.remove('hidden');
         }
@@ -310,7 +310,7 @@
             recordCurrentAnswer(false);
             input.disabled = true;
             document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
-            feedback.innerText = `오답입니다! 정답은 "${String(quizData[currentIndex].answer).trim()}" 입니다.`;
+            feedback.innerText = getWrongFeedbackText();
             feedback.style.color = "#e53e3e";
             document.getElementById('next-question-btn').classList.remove('hidden');
         }
@@ -364,6 +364,12 @@
         if(q.answer == "3") return q.c3;
         if(q.answer == "4") return q.c4;
         return String(q.answer).trim();
+    }
+
+    function getWrongFeedbackText() {
+        const q = quizData[currentIndex];
+        const explanation = String(q.explanation || "").trim();
+        return explanation ? `오답입니다! ${explanation}` : "오답입니다!";
     }
 
     function getScoreCounts() {
