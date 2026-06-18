@@ -175,8 +175,8 @@
         const gradeGroups = [
             { name: "중등", grades: ["중1", "중2", "중3"] },
             { name: "고등", grades: ["고1", "고2", "고3"] },
-            { name: "TOEFL", grades: ["TOEFL", "토플"] },
-            { name: "SAT", grades: ["SAT", "sat"] }
+            { name: "TOEFL", grades: ["TOEFL"] },
+            { name: "SAT", grades: ["SAT"] }
         ];
 
         window.onload = function() {
@@ -233,6 +233,12 @@
 
         function selectCategory(category) {
             selectedCategory = category;
+            const directGroup = gradeGroups.find(item => item.name === category && item.grades.length === 1);
+            if (directGroup) {
+                selectGrade(directGroup.grades[0], 'step1');
+                return;
+            }
+
             document.getElementById('category-title').innerText = "선택한 분류: " + category;
             const gradeDiv = document.getElementById('grade-btns');
             gradeDiv.innerHTML = "";
@@ -249,7 +255,7 @@
             changeScreen('step1', 'step2');
         }
 
-        function selectGrade(grade) {
+        function selectGrade(grade, fromStep = 'step2') {
             selectedGrade = grade;
             document.getElementById('grade-title').innerText = "선택한 학년/시험: " + grade;
             const subjectDiv = document.getElementById('subject-btns');
@@ -257,7 +263,7 @@
             for (let subject in db[grade]) {
                 subjectDiv.innerHTML += `<button onclick="selectSubject('${subject}')">${subject}</button>`;
             }
-            changeScreen('step2', 'step3');
+            changeScreen(fromStep, 'step3');
         }
 
         function selectSubject(subject) {
