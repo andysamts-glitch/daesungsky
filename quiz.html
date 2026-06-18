@@ -310,8 +310,7 @@
             buttons.forEach(b => {
                 if(b.dataset.correct === "true") b.classList.add('correct');
             });
-            feedback.innerText = getWrongFeedbackText();
-            feedback.style.color = "#e53e3e";
+            showWrongFeedback();
             document.getElementById('next-question-btn').classList.remove('hidden');
         }
     }
@@ -335,8 +334,7 @@
             recordCurrentAnswer(false);
             input.disabled = true;
             document.querySelectorAll('#subjective-area button').forEach(btn => btn.disabled = true);
-            feedback.innerText = getWrongFeedbackText();
-            feedback.style.color = "#e53e3e";
+            showWrongFeedback();
             document.getElementById('next-question-btn').classList.remove('hidden');
         }
     }
@@ -391,10 +389,20 @@
         return String(q.answer).trim();
     }
 
-    function getWrongFeedbackText() {
+    function showWrongFeedback() {
+        const feedback = document.getElementById('feedback');
         const q = quizData[currentIndex];
         const explanation = String(q.explanation || "").trim();
-        return explanation ? `오답입니다!\n${explanation}` : "오답입니다!";
+        feedback.style.color = "";
+
+        if (explanation) {
+            feedback.innerHTML = `
+                <div style="color: #e53e3e;">오답입니다!</div>
+                <div style="color: #2d3748; font-weight: 600; margin-top: 4px;">${escapeHtml(explanation)}</div>
+            `;
+        } else {
+            feedback.innerHTML = `<div style="color: #e53e3e;">오답입니다!</div>`;
+        }
     }
 
     function getScoreCounts() {
