@@ -87,7 +87,7 @@
             <button class="submit-btn" onclick="checkSubjective()">정답 제출</button>
         </div>
         
-        <div id="feedback" style="text-align: center; min-height: 30px; font-weight: bold; margin-top: 15px; font-size: 18px; line-height: 1.5;"></div>
+        <div id="feedback" style="text-align: center; min-height: 30px; font-weight: bold; margin-top: 15px; font-size: 18px; line-height: 1.6; white-space: pre-line;"></div>
         <button id="next-question-btn" class="submit-btn hidden" style="margin-top: 15px;" onclick="nextQuestion()">다음 문제</button>
     </div>
 </div>
@@ -394,7 +394,7 @@
     function getWrongFeedbackText() {
         const q = quizData[currentIndex];
         const explanation = String(q.explanation || "").trim();
-        return explanation ? `오답입니다! ${explanation}` : "오답입니다!";
+        return explanation ? `오답입니다!\n${explanation}` : "오답입니다!";
     }
 
     function getScoreCounts() {
