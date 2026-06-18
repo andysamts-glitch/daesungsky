@@ -314,6 +314,13 @@
                     grade: selectedGrade,
                     subject: selectedSubject
                 });
+                sessionStorage.setItem('dsskyQuizAccess', JSON.stringify({
+                    problem: selectedProblem,
+                    student: studentName,
+                    grade: selectedGrade,
+                    subject: selectedSubject,
+                    createdAt: Date.now()
+                }));
                 window.location.href = "quiz.html?" + params.toString();
             } else {
                 alert("암호가 틀렸습니다. 다시 확인해 주세요!");

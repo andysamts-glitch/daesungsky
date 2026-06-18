@@ -131,6 +131,12 @@
             return;
         }
 
+        if(!hasValidQuizAccess()) {
+            alert("첫 화면에서 이름과 암호를 입력한 뒤 시작해 주세요.");
+            location.href = "index.html";
+            return;
+        }
+
         document.getElementById('test-title').innerText = problemSet + " 풀이";
 
         fetch(`${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}`)
@@ -161,6 +167,25 @@
             document.getElementById('loading').innerText = "데이터를 불러오는 데 실패했습니다. 새로고침 해주세요.";
         });
     };
+
+    function hasValidQuizAccess() {
+        try {
+            const rawAccess = sessionStorage.getItem('dsskyQuizAccess');
+            if(!rawAccess) return false;
+
+            const access = JSON.parse(rawAccess);
+            const expiresInMs = 3 * 60 * 60 * 1000;
+            const isFresh = Date.now() - Number(access.createdAt || 0) <= expiresInMs;
+
+            return isFresh
+                && access.problem === problemSet
+                && access.student === studentName
+                && access.grade === selectedGrade
+                && access.subject === selectedSubject;
+        } catch (error) {
+            return false;
+        }
+    }
 
     function renderPassage(passage) {
         const passageText = document.getElementById('passage-text');
