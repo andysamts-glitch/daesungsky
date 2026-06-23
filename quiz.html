@@ -229,6 +229,9 @@
 
     function formatPassageMarkup(text) {
         return escapeHtml(text)
+            .replace(/&amp;#0*39;/gi, "'")
+            .replace(/&amp;apos;/gi, "'")
+            .replace(/&amp;quot;/gi, '"')
             .replace(/&amp;lt;u&amp;gt;/gi, '<u>')
             .replace(/&amp;lt;\/u&amp;gt;/gi, '</u>')
             .replace(/&amp;lt;mark&amp;gt;/gi, '<mark>')
