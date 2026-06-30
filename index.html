@@ -182,10 +182,20 @@
 
         window.onload = function() {
             const categoryDiv = document.getElementById('category-btns');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-            fetch(scriptURL)
-            .then(response => response.json())
+            fetch(`${scriptURL}?t=${Date.now()}`, { signal: controller.signal, cache: "no-store" })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!Array.isArray(data)) {
+                    throw new Error("Invalid data");
+                }
                 categoryDiv.innerHTML = ""; 
                 
                 data.forEach(item => {
@@ -203,7 +213,10 @@
                 renderCategoryButtons();
             })
             .catch(error => {
-                categoryDiv.innerHTML = "<p style='grid-column: span 2; color: red;'>데이터를 불러오지 못했습니다. 새로고침 해주세요.</p>";
+                categoryDiv.innerHTML = "<p style='grid-column: span 2; color: red; margin-bottom: 8px;'>데이터를 불러오지 못했습니다.</p><button class='full-width' onclick='location.reload()'>다시 불러오기</button>";
+            })
+            .finally(() => {
+                clearTimeout(timeoutId);
             });
         }
 
