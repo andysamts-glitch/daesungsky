@@ -141,7 +141,7 @@
             <h2>과목 선택</h2>
             <p id="grade-title">선택한 학년/시험: -</p>
             <div class="btn-group" id="subject-btns"></div>
-            <button class="back-btn full-width" onclick="goBack('step3', 'step2')">돌아가기</button>
+            <button class="back-btn full-width" onclick="goBackFromStep3()">돌아가기</button>
         </div>
 
         <div id="step4" class="hidden">
@@ -171,6 +171,7 @@
         let selectedGrade = "";
         let selectedSubject = "";
         let selectedProblem = "";
+        let step3BackTarget = "step2";
 
         const gradeGroups = [
             { name: "중등", grades: ["중1", "중2", "중3"] },
@@ -257,6 +258,7 @@
 
         function selectGrade(grade, fromStep = 'step2') {
             selectedGrade = grade;
+            step3BackTarget = fromStep;
             document.getElementById('grade-title').innerText = "선택한 학년/시험: " + grade;
             const subjectDiv = document.getElementById('subject-btns');
             subjectDiv.innerHTML = ""; 
@@ -293,6 +295,10 @@
         function goBack(hideId, showId) {
             changeScreen(hideId, showId);
             document.getElementById('password-input').value = ""; 
+        }
+
+        function goBackFromStep3() {
+            goBack('step3', step3BackTarget || 'step2');
         }
 
         function checkPassword() {
