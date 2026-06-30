@@ -629,15 +629,23 @@
         const feedback = document.getElementById('feedback');
         const q = quizData[currentIndex];
         const explanation = String(q.explanation || "").trim();
+        const correctAnswer = getCorrectAnswerText();
+        const answerHtml = correctAnswer
+            ? `<div class="wrong-feedback-explanation">정답: ${escapeHtml(correctAnswer)}</div>`
+            : "";
         feedback.style.color = "";
 
         if (explanation) {
             feedback.innerHTML = `
                 <div class="wrong-feedback-title">오답입니다!</div>
+                ${answerHtml}
                 <div class="wrong-feedback-explanation">${escapeHtml(explanation)}</div>
             `;
         } else {
-            feedback.innerHTML = `<div class="wrong-feedback-title">오답입니다!</div>`;
+            feedback.innerHTML = `
+                <div class="wrong-feedback-title">오답입니다!</div>
+                ${answerHtml}
+            `;
         }
     }
 
