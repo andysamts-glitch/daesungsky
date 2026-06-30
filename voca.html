@@ -29,8 +29,9 @@
         .nav-prev:hover { background-color: #4a5568; }
         .submit-test-btn { background-color: #e53e3e; margin-top: 20px; }
         .submit-test-btn:hover { background-color: #c53030; }
-        .home-btn { width: auto; min-width: 110px; padding: 10px 14px; font-size: 15px; background-color: #718096; margin-bottom: 15px; }
-        .home-btn:hover { background-color: #4a5568; }
+        .home-btn { width: auto; min-width: 110px; padding: 10px 14px; font-size: 15px; background-color: #dd6b20; margin-bottom: 15px; }
+        .home-btn:hover { background-color: #c05621; }
+        .intro-home-row { text-align: left; margin-bottom: 6px; }
 
         .wrong-list { margin-top: 20px; text-align: left; background: #fff5f5; padding: 20px; border-radius: 10px; border: 1px solid #feb2b2; }
         .wrong-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #feb2b2; }
@@ -46,6 +47,9 @@
 
 <div class="container">
     <div id="intro-screen">
+        <div class="intro-home-row">
+            <button class="home-btn" onclick="location.href='index.html'">홈으로</button>
+        </div>
         <h1 id="title-text">단어 테스트 준비</h1>
         
         <label><b>🙋‍♂️ 학생 이름</b></label>
@@ -99,17 +103,6 @@
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
     
-    // 🌟 과목별 암호화(Base64) 비밀번호 사전입니다!
-    const subjectPasswords = {
-        "토플": "ZHNza3k=",    
-        "토익": "ZHNza3k=",  
-        "SAT": "ZHNzYXQx",     
-        "교과서_중등": "ZHN0ZXh0MQ==",
-        "교과서_고등": "ZHN0ZXh0MQ==",
-        "교과서": "ZHN0ZXh0MQ==",
-        "기본": "cGFzcw=="     // 위 목록에 없는 과목을 눌렀을 때의 기본 암호: pass
-    };
-
     let allVocaData = [];
     let currentQuizData = []; 
     let currentIndex = 0;
@@ -165,19 +158,30 @@
         return array;
     }
 
-    function startTest() {
+    async function startTest() {
         studentName = document.getElementById('student-name').value.trim();
         const enteredPw = document.getElementById('secret-pw').value;
         selectedDay = document.getElementById('day-select').value;
         const rangeVal = document.getElementById('range-select').value;
 
         if(!studentName) { alert("학생 이름을 입력해 주세요!"); return; }
-        
-        // 🌟 마법의 암호 확인 구간! 선택한 과목의 암호를 사전에서 꺼내옵니다.
-        // 만약 사전에 등록되지 않은 새로운 과목이라면 "기본" 암호를 사용합니다.
-        let correctHash = subjectPasswords[subjectType] || subjectPasswords["기본"];
+        if(!enteredPw) { alert("비밀번호를 입력해 주세요!"); return; }
 
-        if(btoa(enteredPw) !== correctHash) {
+        const startBtn = document.getElementById('start-btn');
+        const originalStartText = startBtn.innerText;
+        startBtn.disabled = true;
+        startBtn.innerText = "비밀번호 확인 중...";
+
+        const passwordOk = await checkVocaPassword(enteredPw, selectedDay);
+
+        startBtn.disabled = false;
+        startBtn.innerText = originalStartText;
+
+        if(passwordOk === null) {
+            return;
+        }
+
+        if(!passwordOk) {
             alert("❌ 비밀번호가 틀렸습니다. 학원/선생님께 문의하세요.");
             document.getElementById('secret-pw').value = ""; 
             document.getElementById('secret-pw').focus();
@@ -229,6 +233,27 @@
         
         currentIndex = 0;
         renderQuiz();
+    }
+
+    async function checkVocaPassword(password, day) {
+        const formData = new URLSearchParams();
+        formData.append('action', 'checkVocaPassword');
+        formData.append('subject', subjectType);
+        formData.append('day', day);
+        formData.append('password', password);
+
+        try {
+            const res = await fetch(scriptURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+            const data = await res.json();
+            return data && data.ok === true;
+        } catch (err) {
+            alert("비밀번호 확인에 실패했습니다. 인터넷 연결을 확인해 주세요.");
+            return null;
+        }
     }
 
     function renderQuiz() {
