@@ -47,6 +47,10 @@
         .sentence-a { color: #2d3748; font-size: 18px; line-height: 1.6; margin: 0 0 18px 0; }
         .sentence-template { color: #1a365d; font-size: 20px; font-weight: bold; line-height: 1.7; margin: 0; }
         .sentence-answer-box { min-height: 58px; padding: 14px; margin-bottom: 14px; border: 2px solid #cbd5e0; border-radius: 10px; background: #f7fafc; color: #1a365d; font-size: 18px; font-weight: bold; line-height: 1.5; text-align: left; }
+        .sentence-slots { display: flex; flex-wrap: wrap; gap: 8px; }
+        .sentence-slot { min-height: 40px; min-width: 84px; display: inline-flex; align-items: center; justify-content: center; padding: 7px 10px; border: 2px solid #90cdf4; border-radius: 10px; background: #ebf8ff; color: #1a365d; font-size: 15px; line-height: 1.25; text-align: center; box-sizing: border-box; }
+        .sentence-slot.empty { border-style: dashed; background: #fff; color: #a0aec0; }
+        .sentence-remaining { color: #718096; font-size: 13px; font-weight: bold; margin: -6px 0 12px 0; text-align: left; }
         .sentence-right-template { display: block; color: #1a365d; font-size: 19px; line-height: 1.55; }
         .sentence-right-help { display: block; color: #718096; font-size: 14px; font-weight: bold; margin-top: 8px; }
         .word-bank { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
@@ -76,6 +80,7 @@
             .sentence-template { font-size: 18px; }
             .sentence-right-template { font-size: 17px; }
             .sentence-answer-box { font-size: 16px; }
+            .sentence-slot { min-width: 72px; font-size: 14px; }
         }
 
         @media (orientation: landscape) and (max-height: 520px) {
@@ -115,10 +120,11 @@
 
         <div id="sentence-area" class="hidden">
             <div class="sentence-answer-box" id="sentence-answer-box">단어를 눌러 문장을 만드세요.</div>
+            <div class="sentence-remaining" id="sentence-remaining"></div>
             <div class="word-bank" id="word-bank"></div>
             <div class="sentence-actions">
                 <button class="submit-btn reset-btn" onclick="resetSentenceAnswer()">다시 하기</button>
-                <button class="submit-btn" onclick="checkSentenceAnswer()">정답 제출</button>
+                <button id="sentence-submit-btn" class="submit-btn" onclick="checkSentenceAnswer()">정답 제출</button>
             </div>
         </div>
         
@@ -437,11 +443,24 @@
     function renderSentenceAnswer() {
         const q = quizData[currentIndex];
         const answerBox = document.getElementById('sentence-answer-box');
-        const selectedText = q.selectedChunks
-            .map(index => q.wordChunks[index])
-            .join(" ");
+        const remaining = document.getElementById('sentence-remaining');
+        const submitBtn = document.getElementById('sentence-submit-btn');
+        const selectedChunks = q.selectedChunks.map(index => q.wordChunks[index]);
+        const slotCount = q.blankCount || selectedChunks.length || 1;
 
-        answerBox.innerText = selectedText || "단어를 눌러 문장을 만드세요.";
+        answerBox.innerHTML = `<div class="sentence-slots">${
+            Array.from({ length: slotCount }, (_, index) => {
+                const text = selectedChunks[index] || "";
+                const className = text ? "sentence-slot" : "sentence-slot empty";
+                return `<span class="${className}">${text ? escapeHtml(text) : "빈칸"}</span>`;
+            }).join("")
+        }</div>`;
+
+        const remainingCount = Math.max(slotCount - selectedChunks.length, 0);
+        remaining.innerText = remainingCount > 0
+            ? `남은 칸: ${remainingCount}개`
+            : "모든 칸을 채웠습니다.";
+        submitBtn.disabled = remainingCount > 0 || q.answered;
 
         document.querySelectorAll('.word-chip').forEach(btn => {
             const index = Number(btn.dataset.index);
@@ -460,6 +479,8 @@
     function checkSentenceAnswer() {
         const q = quizData[currentIndex];
         const feedback = document.getElementById('feedback');
+        if(q.blankCount && q.selectedChunks.length < q.blankCount) return;
+
         const selectedChunks = q.selectedChunks.map(index => q.wordChunks[index]);
         const userFullAnswer = buildSentenceAnswer(q.blankSentence || q.c1, selectedChunks);
         const userChunkAnswer = normalizeChunkAnswer(selectedChunks.join(" / "));
@@ -470,7 +491,7 @@
 
         const isCorrect = correctIsChunkAnswer
             ? userChunkAnswer === normalizeChunkAnswer(correctAnswer)
-            : normalizeAnswerText(userFullAnswer) === normalizeAnswerText(correctAnswer);
+            : normalizeSentenceAnswer(userFullAnswer) === normalizeSentenceAnswer(correctAnswer);
 
         if(isCorrect) {
             recordCurrentAnswer(true);
@@ -490,6 +511,13 @@
             .map(chunk => normalizeAnswerText(chunk))
             .filter(Boolean)
             .join(" / ");
+    }
+
+    function normalizeSentenceAnswer(answer) {
+        return normalizeAnswerText(answer)
+            .replace(/[.!?]+$/g, "")
+            .replace(/[“”]/g, '"')
+            .replace(/[‘’]/g, "'");
     }
 
     function buildSentenceAnswer(template, chunks) {
