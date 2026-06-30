@@ -461,12 +461,18 @@
         const q = quizData[currentIndex];
         const feedback = document.getElementById('feedback');
         const selectedChunks = q.selectedChunks.map(index => q.wordChunks[index]);
-        const userAnswer = normalizeChunkAnswer(selectedChunks.join(" / "));
+        const userFullAnswer = buildSentenceAnswer(q.blankSentence || q.c1, selectedChunks);
+        const userChunkAnswer = normalizeChunkAnswer(selectedChunks.join(" / "));
         const correctAnswer = String(q.answer || "").trim();
+        const correctIsChunkAnswer = correctAnswer.includes("/");
 
         document.querySelectorAll('#sentence-area button').forEach(btn => btn.disabled = true);
 
-        if(userAnswer === normalizeChunkAnswer(correctAnswer)) {
+        const isCorrect = correctIsChunkAnswer
+            ? userChunkAnswer === normalizeChunkAnswer(correctAnswer)
+            : normalizeAnswerText(userFullAnswer) === normalizeAnswerText(correctAnswer);
+
+        if(isCorrect) {
             recordCurrentAnswer(true);
             feedback.innerText = "정답입니다! ⭕";
             feedback.style.color = "#38a169";
@@ -484,6 +490,14 @@
             .map(chunk => normalizeAnswerText(chunk))
             .filter(Boolean)
             .join(" / ");
+    }
+
+    function buildSentenceAnswer(template, chunks) {
+        let chunkIndex = 0;
+        return String(template || "")
+            .replace(/____/g, () => chunks[chunkIndex++] || "")
+            .replace(/\s+/g, " ")
+            .trim();
     }
 
     function checkObjective(btn, isCorrect) {
