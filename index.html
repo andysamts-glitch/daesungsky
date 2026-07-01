@@ -31,7 +31,9 @@
         .public-results-row { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
         .public-results-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 110px; padding: 7px 12px; font-size: 13px; border-radius: 999px; background: #2b6cb0; }
         .public-results-btn:hover { background: #1a365d; }
-        .top-home-row { text-align: left; margin-bottom: 8px; }
+        .results-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+        .results-header h2 { margin: 0; text-align: left; }
+        .results-header-spacer { width: 90px; flex: 0 0 auto; }
         .top-home-btn { width: auto; min-width: 90px; padding: 9px 13px; font-size: 14px; border-radius: 999px; background: #dd6b20; }
         .top-home-btn:hover { background: #c05621; }
         .results-table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid #e2e8f0; border-radius: 8px; }
@@ -147,10 +149,11 @@
         </div>
 
         <div id="public-results-screen" class="hidden">
-            <div class="top-home-row">
+            <div class="results-header">
+                <span class="results-header-spacer" aria-hidden="true"></span>
+                <h2 id="public-results-title">전체 학생 결과</h2>
                 <button class="top-home-btn" onclick="goBack('public-results-screen', 'step1')">홈으로</button>
             </div>
-            <h2 id="public-results-title">전체 학생 결과</h2>
             <p id="public-results-desc">최근 결과입니다.</p>
             <div id="public-results-area" class="result-loading">결과를 불러오는 중입니다...</div>
             <button class="back-btn full-width" style="width: 100%;" onclick="goBack('public-results-screen', 'step1')">돌아가기</button>
