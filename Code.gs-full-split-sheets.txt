@@ -1,0 +1,475 @@
+// Google Apps Script final version for split sheets.
+// Replace the whole current Code.gs with this code.
+
+var MIDDLE_RESULT_EMAIL = "coconanwon@gmail.com"; // 중등부 결과를 받을 이메일 주소
+
+function doPost(e) {
+  // 단어 테스트 비밀번호 확인
+  if (e.parameter.action === "checkVocaPassword") {
+    return checkVocaPassword_(e);
+  }
+
+  // 내신/모의고사 테스트 완료 기록 저장
+  if (e.parameter.action === "saveTest") {
+    return saveTestCompletion_(e);
+  }
+
+  // 단어장 성적표 저장 기능
+  if (e.parameter.action === "saveScore") {
+    var scoreSheet = getScoresSheet_();
+    if (scoreSheet) {
+      scoreSheet.appendRow([
+        new Date(),
+        e.parameter.studentName,
+        e.parameter.subjectDay,
+        e.parameter.range,
+        e.parameter.score
+      ]);
+    }
+    sendMiddleVocaResultEmail_(e);
+    return ContentService.createTextOutput("성공");
+  }
+
+  // 관리자 화면에서 방 만들기 저장 기능
+  var passageSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Passages");
+  if (passageSheet) {
+    passageSheet.appendRow([
+      e.parameter.grade,
+      e.parameter.subject,
+      e.parameter.set,
+      e.parameter.password,
+      "",
+      new Date()
+    ]);
+  }
+  return ContentService.createTextOutput("성공");
+}
+
+function checkVocaPassword_(e) {
+  var subject = String(e.parameter.subject || "").trim();
+  var day = String(e.parameter.day || "").trim();
+  var password = String(e.parameter.password || "");
+  var gradeKey = getVocaGradeKey_(day);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("VocaPasswords");
+  var exactPassword = null;
+  var defaultPassword = null;
+
+  if (sheet) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var rowSubject = String(rows[i][0] || "").trim();
+      var rowDay = String(rows[i][1] || "").trim();
+      var rowPassword = String(rows[i][2] || "");
+
+      if (rowSubject !== subject) continue;
+
+      if (rowDay === day || (gradeKey && rowDay === gradeKey)) {
+        exactPassword = rowPassword;
+        break;
+      }
+
+      if (rowDay === "" && defaultPassword === null) {
+        defaultPassword = rowPassword;
+      }
+    }
+  }
+
+  var correctPassword = exactPassword !== null ? exactPassword : defaultPassword;
+  var ok = correctPassword !== null && password === correctPassword;
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: ok }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getVocaGradeKey_(day) {
+  var value = String(day || "").trim();
+  var match = value.match(/^(중[1-3]|고[1-3])/);
+  return match ? match[1] : "";
+}
+
+function getScoresSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Scores") || ss.getSheetByName("scores");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("Scores");
+    sheet.appendRow([
+      "timestamp",
+      "studentName",
+      "subjectDay",
+      "range",
+      "score"
+    ]);
+  }
+
+  return sheet;
+}
+
+function saveTestCompletion_(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("test");
+
+  var headers = [
+    "timestamp",
+    "studentName",
+    "grade",
+    "subject",
+    "problemSet",
+    "questionCount",
+    "correctCount",
+    "wrongCount",
+    "score",
+    "completed"
+  ];
+
+  if (!sheet) {
+    sheet = ss.insertSheet("test");
+    sheet.appendRow(headers);
+  } else if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+  }
+
+  sheet.appendRow([
+    new Date(),
+    e.parameter.studentName || "",
+    e.parameter.grade || "",
+    e.parameter.subject || "",
+    e.parameter.problemSet || "",
+    e.parameter.questionCount || "",
+    e.parameter.correctCount || "",
+    e.parameter.wrongCount || "",
+    e.parameter.score || "",
+    e.parameter.completed || "TRUE"
+  ]);
+
+  sendMiddleTestResultEmail_(e);
+
+  return ContentService.createTextOutput("성공");
+}
+
+function doGet(e) {
+  // 공개용 학생 결과 보기: test 시트에서 필요한 항목만 보내기
+  if (e.parameter.action === "getPublicTestResults") {
+    return getPublicTestResults_(e);
+  }
+
+  // 단어: 과목별로 나눈 시트만 읽기
+  if (e.parameter.action === "getVoca") {
+    var targetSubject = String(e.parameter.subject || "").trim();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var vocaSheetName = getVocaSheetName_(targetSubject);
+    var vocaSheet = ss.getSheetByName(vocaSheetName) || ss.getSheetByName("Voca");
+    var usingFallbackVocaSheet = vocaSheet && vocaSheet.getName() === "Voca";
+    var vocaResult = [];
+
+    if (vocaSheet) {
+      var vocaRows = vocaSheet.getDataRange().getValues();
+      for (var i = 1; i < vocaRows.length; i++) {
+        var rowSubject = String(vocaRows[i][0] || "").trim();
+        var rowDay = vocaRows[i][1];
+        if (rowDay && (!targetSubject || !usingFallbackVocaSheet || rowSubject === targetSubject)) {
+          vocaResult.push({
+            subject: String(vocaRows[i][0] || targetSubject),
+            day: String(vocaRows[i][1]),
+            num: Number(vocaRows[i][2]),
+            question: String(vocaRows[i][3]),
+            answer: String(vocaRows[i][4]),
+            w1: String(vocaRows[i][5]),
+            w2: String(vocaRows[i][6]),
+            w3: String(vocaRows[i][7])
+          });
+        }
+      }
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify(vocaResult))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 문제 풀이: 학년별로 나눈 Questions 시트만 읽기
+  if (e.parameter.action === "getQuiz") {
+    var targetSet = String(e.parameter.set || "");
+    var targetGrade = String(e.parameter.grade || "").trim();
+    var result = { passage: "", questions: [] };
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    var passageSheet = ss.getSheetByName("Passages");
+    if (passageSheet) {
+      var pRows = passageSheet.getDataRange().getValues();
+      var pRichRows = passageSheet.getDataRange().getRichTextValues();
+      var pBackgroundRows = passageSheet.getDataRange().getBackgrounds();
+      for (var p = 1; p < pRows.length; p++) {
+        var rowGrade = String(pRows[p][0] || "").trim();
+        var rowSet = String(pRows[p][2] || "");
+        if (rowSet === targetSet && (!targetGrade || rowGrade === targetGrade)) {
+          result.passage = resolvePassageText_(ss, pRows[p][4], pRichRows[p][4], pBackgroundRows[p][4]);
+          break;
+        }
+      }
+    }
+
+    var questionSheetName = getQuestionSheetName_(targetGrade);
+    var qSheet = ss.getSheetByName(questionSheetName) || ss.getSheetByName("Questions");
+    if (qSheet) {
+      var qRows = qSheet.getDataRange().getValues();
+      for (var q = 1; q < qRows.length; q++) {
+        if (String(qRows[q][0]) === targetSet) {
+          result.questions.push({
+            question: String(qRows[q][1]),
+            c1: String(qRows[q][2]),
+            c2: String(qRows[q][3]),
+            c3: String(qRows[q][4]),
+            c4: String(qRows[q][5]),
+            answer: String(qRows[q][6]),
+            explanation: String(qRows[q][7] || ""),
+            type: String(qRows[q][8] || ""),
+            blankSentence: String(qRows[q][2] || ""),
+            wordBank: String(qRows[q][3] || "")
+          });
+        }
+      }
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 첫 화면 목록은 Passages에서 가져오기
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Passages");
+  var dataList = [];
+  if (sheet) {
+    var rows = sheet.getDataRange().getValues();
+    for (var j = 1; j < rows.length; j++) {
+      var row = rows[j];
+      if (row[0] && row[1] && row[2]) {
+        dataList.push({
+          grade: normalizeGradeName_(row[0]),
+          subject: String(row[1]),
+          set: String(row[2]),
+          password: String(row[3])
+        });
+      }
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(dataList))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getPublicTestResults_(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("test") || ss.getSheetByName("Test");
+  var result = [];
+  var limit = Math.min(Number(e.parameter.limit || 100), 200);
+
+  if (sheet && sheet.getLastRow() > 1) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = rows.length - 1; i >= 1 && result.length < limit; i--) {
+      var row = rows[i];
+      if (!row[0] && !row[1]) continue;
+
+      result.push({
+        date: formatPublicDate_(row[0]),
+        studentName: maskStudentName_(row[1]),
+        grade: String(row[2] || ""),
+        subject: String(row[3] || ""),
+        problemSet: String(row[4] || ""),
+        score: String(row[8] || "")
+      });
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({
+      type: "publicTestResults",
+      rows: result
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function formatPublicDate_(value) {
+  if (!value) return "";
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return String(value);
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
+}
+
+function maskStudentName_(value) {
+  var name = String(value || "").trim();
+  if (!name) return "";
+  var chars = Array.from(name);
+  if (chars.length === 1) return chars[0] + "**";
+  return chars[0] + "**";
+}
+
+function getVocaSheetName_(subject) {
+  if (subject === "토플") return "Voca_토플";
+  if (subject === "토익") return "Voca_토익";
+  if (subject === "SAT") return "Voca_SAT";
+  if (subject === "교과서_중등") return "Voca_교과서_중등";
+  if (subject === "교과서_고등") return "Voca_교과서_고등";
+  if (subject === "교과서") return "Voca_교과서";
+  return "Voca";
+}
+
+function getQuestionSheetName_(grade) {
+  grade = normalizeGradeName_(grade);
+  if (grade === "중1") return "Questions_중1";
+  if (grade === "중2") return "Questions_중2";
+  if (grade === "중3") return "Questions_중3";
+  if (grade === "고1") return "Questions_고1";
+  if (grade === "고2") return "Questions_고2";
+  if (grade === "고3") return "Questions_고3";
+  if (grade === "TOEFL") return "Questions_TOEFL";
+  if (grade === "SAT") return "Questions_SAT";
+  return "Questions";
+}
+
+function normalizeGradeName_(grade) {
+  var value = String(grade || "").trim();
+  var upper = value.toUpperCase();
+  if (value === "토플" || upper === "TOEFL") return "TOEFL";
+  if (value === "사트" || upper === "SAT") return "SAT";
+  return value;
+}
+
+function resolvePassageText_(ss, passageValue, passageRichTextValue, passageBackground) {
+  var value = String(passageValue || "").trim();
+  if (!value) return "";
+
+  var passageTextSheet = ss.getSheetByName("PassageTexts");
+  if (!passageTextSheet) return richTextToHtml_(passageRichTextValue, passageBackground) || value;
+
+  var rows = passageTextSheet.getDataRange().getValues();
+  var richRows = passageTextSheet.getDataRange().getRichTextValues();
+  var backgroundRows = passageTextSheet.getDataRange().getBackgrounds();
+  for (var i = 1; i < rows.length; i++) {
+    var passageId = String(rows[i][0] || "").trim();
+    if (passageId === value) {
+      return richTextToHtml_(richRows[i][1], backgroundRows[i][1]) || rows[i][1] || "";
+    }
+  }
+
+  // 기존 Passages 데이터처럼 E열에 지문 본문이 직접 들어 있는 경우도 계속 지원
+  return richTextToHtml_(passageRichTextValue, passageBackground) || value;
+}
+
+function richTextToHtml_(richTextValue, backgroundColor) {
+  if (!richTextValue) return "";
+
+  var runs = richTextValue.getRuns();
+  if (!runs || runs.length === 0) {
+    return wrapHighlight_(escapeHtml_(richTextValue.getText()), backgroundColor);
+  }
+
+  var html = "";
+  runs.forEach(function(run) {
+    var text = escapeHtml_(run.getText());
+    var style = run.getTextStyle();
+    if (style && style.isUnderline()) {
+      text = "<u>" + text + "</u>";
+    }
+
+    if (isHighlightedBackground_(backgroundColor)) {
+      text = "<mark>" + text + "</mark>";
+    }
+
+    html += text;
+  });
+
+  return html;
+}
+
+function wrapHighlight_(html, backgroundColor) {
+  if (isHighlightedBackground_(backgroundColor)) {
+    return "<mark>" + html + "</mark>";
+  }
+  return html;
+}
+
+function isHighlightedBackground_(backgroundColor) {
+  var color = String(backgroundColor || "").toLowerCase();
+  return color && color !== "#ffffff" && color !== "white" && color !== "#fff";
+}
+
+function escapeHtml_(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function sendMiddleVocaResultEmail_(e) {
+  var subjectDay = String(e.parameter.subjectDay || "");
+
+  // 단어는 중등부에서 쓰는 교과서 단어만 이메일 발송
+  if (subjectDay.indexOf("중등 교과서") === -1) return;
+
+  var title = "[대성 SKY] 중등 교과서 단어 결과 - " + (e.parameter.studentName || "");
+  var body = [
+    "중등부 교과서 단어 테스트 결과가 저장되었습니다.",
+    "",
+    "학생 이름: " + (e.parameter.studentName || ""),
+    "시험 내용: " + subjectDay,
+    "시험 범위: " + (e.parameter.range || ""),
+    "점수: " + (e.parameter.score || ""),
+    "제출 시간: " + new Date()
+  ].join("\n");
+
+  sendResultEmail_(title, body);
+}
+
+function sendMiddleTestResultEmail_(e) {
+  var grade = String(e.parameter.grade || "").trim();
+
+  // 내신/예상 문제는 중1, 중2, 중3만 이메일 발송
+  if (!isMiddleGrade_(grade)) return;
+
+  var title = "[대성 SKY] 중등 문제 풀이 결과 - " + (e.parameter.studentName || "");
+  var body = [
+    "중등부 내신/예상 문제 풀이 결과가 저장되었습니다.",
+    "",
+    "학생 이름: " + (e.parameter.studentName || ""),
+    "학년: " + grade,
+    "과목: " + (e.parameter.subject || ""),
+    "문제 세트: " + (e.parameter.problemSet || ""),
+    "전체 문제 수: " + (e.parameter.questionCount || ""),
+    "맞은 개수: " + (e.parameter.correctCount || ""),
+    "틀린 개수: " + (e.parameter.wrongCount || ""),
+    "점수: " + (e.parameter.score || ""),
+    "완료 여부: " + (e.parameter.completed || "TRUE"),
+    "제출 시간: " + new Date()
+  ].join("\n");
+
+  sendResultEmail_(title, body);
+}
+
+function isMiddleGrade_(grade) {
+  return grade === "중1" || grade === "중2" || grade === "중3";
+}
+
+function sendResultEmail_(title, body) {
+  try {
+    if (!MIDDLE_RESULT_EMAIL || MIDDLE_RESULT_EMAIL === "teacher@example.com") return;
+    MailApp.sendEmail(MIDDLE_RESULT_EMAIL, title, body);
+  } catch (err) {
+    Logger.log("Result email failed: " + err);
+  }
+}
+
+function testMiddleResultEmail() {
+  if (!MIDDLE_RESULT_EMAIL || MIDDLE_RESULT_EMAIL === "teacher@example.com") {
+    throw new Error("Code.gs 맨 위의 MIDDLE_RESULT_EMAIL을 실제 이메일 주소로 먼저 바꾸세요.");
+  }
+
+  MailApp.sendEmail(
+    MIDDLE_RESULT_EMAIL,
+    "[대성 SKY] 이메일 발송 권한 테스트",
+    "이 메일이 도착하면 중등부 결과 이메일 발송 권한이 정상입니다.\n\n테스트 시간: " + new Date()
+  );
+}

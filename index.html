@@ -28,6 +28,14 @@
         .calculator-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 170px; padding: 7px 14px; font-size: 13px; border-radius: 999px; background: #4a5568; }
         .calculator-btn:hover { background: #2d3748; }
         .calculator-icon { font-size: 16px; line-height: 1; }
+        .public-results-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 170px; padding: 7px 14px; margin-top: 8px; font-size: 13px; border-radius: 999px; background: #2b6cb0; }
+        .public-results-btn:hover { background: #1a365d; }
+        .results-table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .results-table { width: 100%; border-collapse: collapse; min-width: 520px; font-size: 13px; text-align: left; }
+        .results-table th { background: #edf2f7; color: #2d3748; padding: 9px 8px; border-bottom: 1px solid #cbd5e0; white-space: nowrap; }
+        .results-table td { padding: 9px 8px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
+        .results-table tr:last-child td { border-bottom: none; }
+        .result-loading { margin: 18px 0; color: #4a5568; font-weight: bold; }
         
         /* 버튼 그룹: 바둑판 배열 + 스크롤 */
         .btn-group { 
@@ -127,7 +135,16 @@
 
             <div class="calculator-wrap">
                 <button class="calculator-btn" onclick="location.href='grade.html'"><span class="calculator-icon" aria-hidden="true">∑</span> 내 평균·평점 계산</button>
+                <br>
+                <button class="public-results-btn" onclick="showPublicResults()">전체 학생 결과 보기</button>
             </div>
+        </div>
+
+        <div id="public-results-screen" class="hidden">
+            <h2>전체 학생 결과</h2>
+            <p>최근 내신 / 모의고사 풀이 기록입니다.</p>
+            <div id="public-results-area" class="result-loading">결과를 불러오는 중입니다...</div>
+            <button class="back-btn full-width" style="width: 100%;" onclick="goBack('public-results-screen', 'step1')">돌아가기</button>
         </div>
 
         <div id="step2" class="hidden">
@@ -344,6 +361,75 @@
             } else {
                 alert("암호가 틀렸습니다. 다시 확인해 주세요!");
             }
+        }
+
+        function showPublicResults() {
+            changeScreen('step1', 'public-results-screen');
+            const area = document.getElementById('public-results-area');
+            area.className = 'result-loading';
+            area.innerHTML = '결과를 불러오는 중입니다...';
+
+            fetch(`${scriptURL}?action=getPublicTestResults&limit=100&t=${Date.now()}`, { cache: "no-store" })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data || data.type !== "publicTestResults" || !Array.isArray(data.rows)) {
+                    throw new Error("Invalid data");
+                }
+
+                const rows = data.rows;
+
+                if (rows.length === 0) {
+                    area.className = 'result-loading';
+                    area.innerHTML = '아직 표시할 결과가 없습니다.';
+                    return;
+                }
+
+                area.className = 'results-table-wrap';
+                area.innerHTML = `
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>날짜</th>
+                                <th>이름</th>
+                                <th>학년</th>
+                                <th>과목</th>
+                                <th>문제</th>
+                                <th>결과</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map(item => `
+                                <tr>
+                                    <td>${escapeHtml(item.date)}</td>
+                                    <td>${escapeHtml(item.studentName)}</td>
+                                    <td>${escapeHtml(item.grade)}</td>
+                                    <td>${escapeHtml(item.subject)}</td>
+                                    <td>${escapeHtml(item.problemSet)}</td>
+                                    <td>${escapeHtml(item.score)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            })
+            .catch(error => {
+                area.className = 'result-loading';
+                area.innerHTML = "결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>
