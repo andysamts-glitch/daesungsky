@@ -150,6 +150,11 @@ function saveTestCompletion_(e) {
 }
 
 function doGet(e) {
+  // 공개용 단어 결과 보기: Scores 시트에서 필요한 항목만 보내기
+  if (e.parameter.action === "getPublicScoreResults") {
+    return getPublicScoreResults_(e);
+  }
+
   // 공개용 학생 결과 보기: test 시트에서 필요한 항목만 보내기
   if (e.parameter.action === "getPublicTestResults") {
     return getPublicTestResults_(e);
@@ -258,6 +263,35 @@ function doGet(e) {
 
   return ContentService
     .createTextOutput(JSON.stringify(dataList))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getPublicScoreResults_(e) {
+  var sheet = getScoresSheet_();
+  var result = [];
+  var limit = Math.min(Number(e.parameter.limit || 100), 200);
+
+  if (sheet && sheet.getLastRow() > 1) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = rows.length - 1; i >= 1 && result.length < limit; i--) {
+      var row = rows[i];
+      if (!row[0] && !row[1]) continue;
+
+      result.push({
+        date: formatPublicDate_(row[0]),
+        studentName: maskStudentName_(row[1]),
+        subjectDay: String(row[2] || ""),
+        range: String(row[3] || ""),
+        score: String(row[4] || "")
+      });
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({
+      type: "publicScoreResults",
+      rows: result
+    }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 

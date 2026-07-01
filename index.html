@@ -28,7 +28,8 @@
         .calculator-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 170px; padding: 7px 14px; font-size: 13px; border-radius: 999px; background: #4a5568; }
         .calculator-btn:hover { background: #2d3748; }
         .calculator-icon { font-size: 16px; line-height: 1; }
-        .public-results-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 170px; padding: 7px 14px; margin-top: 8px; font-size: 13px; border-radius: 999px; background: #2b6cb0; }
+        .public-results-row { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+        .public-results-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 110px; padding: 7px 12px; font-size: 13px; border-radius: 999px; background: #2b6cb0; }
         .public-results-btn:hover { background: #1a365d; }
         .results-table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid #e2e8f0; border-radius: 8px; }
         .results-table { width: 100%; border-collapse: collapse; min-width: 520px; font-size: 13px; text-align: left; }
@@ -135,14 +136,16 @@
 
             <div class="calculator-wrap">
                 <button class="calculator-btn" onclick="location.href='grade.html'"><span class="calculator-icon" aria-hidden="true">∑</span> 내 평균·평점 계산</button>
-                <br>
-                <button class="public-results-btn" onclick="showPublicResults()">전체 학생 결과 보기</button>
+                <div class="public-results-row">
+                    <button class="public-results-btn" onclick="showPublicResults('score')">결과-단어</button>
+                    <button class="public-results-btn" onclick="showPublicResults('test')">결과-Test</button>
+                </div>
             </div>
         </div>
 
         <div id="public-results-screen" class="hidden">
-            <h2>전체 학생 결과</h2>
-            <p>최근 내신 / 모의고사 풀이 기록입니다.</p>
+            <h2 id="public-results-title">전체 학생 결과</h2>
+            <p id="public-results-desc">최근 결과입니다.</p>
             <div id="public-results-area" class="result-loading">결과를 불러오는 중입니다...</div>
             <button class="back-btn full-width" style="width: 100%;" onclick="goBack('public-results-screen', 'step1')">돌아가기</button>
         </div>
@@ -363,13 +366,21 @@
             }
         }
 
-        function showPublicResults() {
+        function showPublicResults(kind) {
             changeScreen('step1', 'public-results-screen');
             const area = document.getElementById('public-results-area');
+            const title = document.getElementById('public-results-title');
+            const desc = document.getElementById('public-results-desc');
+            const isScore = kind === 'score';
+            const action = isScore ? 'getPublicScoreResults' : 'getPublicTestResults';
+            const expectedType = isScore ? 'publicScoreResults' : 'publicTestResults';
+
+            title.innerText = isScore ? '결과-단어' : '결과-Test';
+            desc.innerText = isScore ? '최근 단어 테스트 결과입니다.' : '최근 내신 / 모의고사 풀이 결과입니다.';
             area.className = 'result-loading';
             area.innerHTML = '결과를 불러오는 중입니다...';
 
-            fetch(`${scriptURL}?action=getPublicTestResults&limit=100&t=${Date.now()}`, { cache: "no-store" })
+            fetch(`${scriptURL}?action=${action}&limit=100&t=${Date.now()}`, { cache: "no-store" })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -377,7 +388,7 @@
                 return response.json();
             })
             .then(data => {
-                if (!data || data.type !== "publicTestResults" || !Array.isArray(data.rows)) {
+                if (!data || data.type !== expectedType || !Array.isArray(data.rows)) {
                     throw new Error("Invalid data");
                 }
 
@@ -390,7 +401,43 @@
                 }
 
                 area.className = 'results-table-wrap';
-                area.innerHTML = `
+                area.innerHTML = isScore ? renderScoreResultsTable(rows) : renderTestResultsTable(rows);
+            })
+            .catch(error => {
+                area.className = 'result-loading';
+                area.innerHTML = "결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            });
+        }
+
+        function renderScoreResultsTable(rows) {
+            return `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>이름</th>
+                            <th>단어</th>
+                            <th>범위</th>
+                            <th>결과</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(item => `
+                            <tr>
+                                <td>${escapeHtml(item.date)}</td>
+                                <td>${escapeHtml(item.studentName)}</td>
+                                <td>${escapeHtml(item.subjectDay)}</td>
+                                <td>${escapeHtml(item.range)}</td>
+                                <td>${escapeHtml(item.score)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderTestResultsTable(rows) {
+            return `
                     <table class="results-table">
                         <thead>
                             <tr>
@@ -416,11 +463,6 @@
                         </tbody>
                     </table>
                 `;
-            })
-            .catch(error => {
-                area.className = 'result-loading';
-                area.innerHTML = "결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
-            });
         }
 
         function escapeHtml(value) {
