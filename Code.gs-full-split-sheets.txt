@@ -337,8 +337,89 @@ function maskStudentName_(value) {
   var name = String(value || "").trim();
   if (!name) return "";
   var chars = Array.from(name);
-  if (chars.length === 1) return chars[0] + "**";
-  return chars[0] + "**";
+  return getNameInitial_(chars[0]) + "**";
+}
+
+function getNameInitial_(char) {
+  var first = String(char || "").trim();
+  if (!first) return "";
+
+  var surnameInitials = {
+    "김": "K",
+    "이": "L",
+    "박": "P",
+    "최": "C",
+    "정": "J",
+    "강": "K",
+    "조": "C",
+    "윤": "Y",
+    "장": "J",
+    "임": "L",
+    "한": "H",
+    "오": "O",
+    "서": "S",
+    "신": "S",
+    "권": "K",
+    "황": "H",
+    "안": "A",
+    "송": "S",
+    "류": "R",
+    "홍": "H",
+    "전": "J",
+    "고": "K",
+    "문": "M",
+    "양": "Y",
+    "손": "S",
+    "배": "B",
+    "백": "B",
+    "허": "H",
+    "유": "Y",
+    "남": "N",
+    "심": "S",
+    "노": "N",
+    "하": "H",
+    "곽": "K",
+    "성": "S",
+    "차": "C",
+    "주": "J",
+    "우": "W",
+    "구": "K",
+    "민": "M",
+    "진": "J",
+    "지": "J",
+    "엄": "E",
+    "채": "C",
+    "원": "W",
+    "천": "C",
+    "방": "B",
+    "공": "K",
+    "현": "H",
+    "함": "H",
+    "변": "B",
+    "여": "Y",
+    "추": "C",
+    "도": "D",
+    "소": "S",
+    "석": "S",
+    "선": "S",
+    "설": "S",
+    "마": "M",
+    "길": "K"
+  };
+
+  if (surnameInitials[first]) return surnameInitials[first];
+
+  var upper = first.charAt(0).toUpperCase();
+  if (/^[A-Z]$/.test(upper)) return upper;
+
+  var code = first.charCodeAt(0);
+  if (code >= 0xAC00 && code <= 0xD7A3) {
+    var choseongIndex = Math.floor((code - 0xAC00) / 588);
+    var initials = ["K", "K", "N", "D", "D", "R", "M", "B", "B", "S", "S", "Y", "J", "J", "C", "K", "T", "P", "H"];
+    return initials[choseongIndex] || "*";
+  }
+
+  return "*";
 }
 
 function getVocaSheetName_(subject) {
