@@ -197,49 +197,29 @@ function doGet(e) {
   // 문제 풀이: 학년별로 나눈 Questions 시트만 읽기
   if (e.parameter.action === "getQuiz") {
     var targetSet = String(e.parameter.set || "");
-    var targetGrade = String(e.parameter.grade || "").trim();
+    var targetGrade = normalizeGradeName_(e.parameter.grade);
     var result = { passage: "", questions: [] };
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var cache = CacheService.getScriptCache();
+    var cacheKey = "quiz:" + targetGrade + ":" + targetSet;
+    var cachedQuiz = cache.get(cacheKey);
 
-    var passageSheet = ss.getSheetByName("Passages");
-    if (passageSheet) {
-      var pRows = passageSheet.getDataRange().getValues();
-      var pRichRows = passageSheet.getDataRange().getRichTextValues();
-      var pBackgroundRows = passageSheet.getDataRange().getBackgrounds();
-      for (var p = 1; p < pRows.length; p++) {
-        var rowGrade = String(pRows[p][0] || "").trim();
-        var rowSet = String(pRows[p][2] || "");
-        if (rowSet === targetSet && (!targetGrade || rowGrade === targetGrade)) {
-          result.passage = resolvePassageText_(ss, pRows[p][4], pRichRows[p][4], pBackgroundRows[p][4]);
-          break;
-        }
-      }
+    if (cachedQuiz) {
+      return ContentService
+        .createTextOutput(cachedQuiz)
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var questionSheetName = getQuestionSheetName_(targetGrade);
-    var qSheet = ss.getSheetByName(questionSheetName) || ss.getSheetByName("Questions");
-    if (qSheet) {
-      var qRows = qSheet.getDataRange().getValues();
-      for (var q = 1; q < qRows.length; q++) {
-        if (String(qRows[q][0]) === targetSet) {
-          result.questions.push({
-            question: String(qRows[q][1]),
-            c1: String(qRows[q][2]),
-            c2: String(qRows[q][3]),
-            c3: String(qRows[q][4]),
-            c4: String(qRows[q][5]),
-            answer: String(qRows[q][6]),
-            explanation: String(qRows[q][7] || ""),
-            type: String(qRows[q][8] || ""),
-            blankSentence: String(qRows[q][2] || ""),
-            wordBank: String(qRows[q][3] || "")
-          });
-        }
-      }
+    result.passage = getQuizPassage_(ss, targetSet, targetGrade);
+    result.questions = getQuizQuestions_(ss, targetSet, targetGrade);
+
+    var quizJson = JSON.stringify(result);
+    if (quizJson.length < 90000) {
+      cache.put(cacheKey, quizJson, 300);
     }
 
     return ContentService
-      .createTextOutput(JSON.stringify(result))
+      .createTextOutput(quizJson)
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -453,6 +433,76 @@ function normalizeGradeName_(grade) {
   return value;
 }
 
+function getQuizPassage_(ss, targetSet, targetGrade) {
+  var passageSheet = ss.getSheetByName("Passages");
+  if (!passageSheet || !targetSet) return "";
+
+  var lastRow = passageSheet.getLastRow();
+  if (lastRow < 2) return "";
+
+  var setMatches = passageSheet
+    .getRange(2, 3, lastRow - 1, 1)
+    .createTextFinder(targetSet)
+    .matchEntireCell(true)
+    .findAll();
+
+  for (var i = 0; i < setMatches.length; i++) {
+    var rowNumber = setMatches[i].getRow();
+    var row = passageSheet.getRange(rowNumber, 1, 1, 5).getValues()[0];
+    var rowGrade = normalizeGradeName_(row[0]);
+
+    if (targetGrade && rowGrade !== targetGrade) continue;
+
+    var passageCell = passageSheet.getRange(rowNumber, 5);
+    return resolvePassageText_(
+      ss,
+      row[4],
+      passageCell.getRichTextValue(),
+      passageCell.getBackground()
+    );
+  }
+
+  return "";
+}
+
+function getQuizQuestions_(ss, targetSet, targetGrade) {
+  var questionSheetName = getQuestionSheetName_(targetGrade);
+  var qSheet = ss.getSheetByName(questionSheetName) || ss.getSheetByName("Questions");
+  var questions = [];
+
+  if (!qSheet || !targetSet) return questions;
+
+  var lastRow = qSheet.getLastRow();
+  if (lastRow < 2) return questions;
+
+  var setMatches = qSheet
+    .getRange(2, 1, lastRow - 1, 1)
+    .createTextFinder(targetSet)
+    .matchEntireCell(true)
+    .findAll()
+    .sort(function(a, b) {
+      return a.getRow() - b.getRow();
+    });
+
+  setMatches.forEach(function(match) {
+    var row = qSheet.getRange(match.getRow(), 1, 1, 9).getValues()[0];
+    questions.push({
+      question: String(row[1]),
+      c1: String(row[2]),
+      c2: String(row[3]),
+      c3: String(row[4]),
+      c4: String(row[5]),
+      answer: String(row[6]),
+      explanation: String(row[7] || ""),
+      type: String(row[8] || ""),
+      blankSentence: String(row[2] || ""),
+      wordBank: String(row[3] || "")
+    });
+  });
+
+  return questions;
+}
+
 function resolvePassageText_(ss, passageValue, passageRichTextValue, passageBackground) {
   var value = String(passageValue || "").trim();
   if (!value) return "";
@@ -460,13 +510,17 @@ function resolvePassageText_(ss, passageValue, passageRichTextValue, passageBack
   var passageTextSheet = ss.getSheetByName("PassageTexts");
   if (!passageTextSheet) return richTextToHtml_(passageRichTextValue, passageBackground) || value;
 
-  var rows = passageTextSheet.getDataRange().getValues();
-  var richRows = passageTextSheet.getDataRange().getRichTextValues();
-  var backgroundRows = passageTextSheet.getDataRange().getBackgrounds();
-  for (var i = 1; i < rows.length; i++) {
-    var passageId = String(rows[i][0] || "").trim();
-    if (passageId === value) {
-      return richTextToHtml_(richRows[i][1], backgroundRows[i][1]) || rows[i][1] || "";
+  var lastRow = passageTextSheet.getLastRow();
+  if (lastRow > 1) {
+    var match = passageTextSheet
+      .getRange(2, 1, lastRow - 1, 1)
+      .createTextFinder(value)
+      .matchEntireCell(true)
+      .findNext();
+
+    if (match) {
+      var textCell = passageTextSheet.getRange(match.getRow(), 2);
+      return richTextToHtml_(textCell.getRichTextValue(), textCell.getBackground()) || textCell.getValue() || "";
     }
   }
 

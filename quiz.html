@@ -183,9 +183,18 @@
 
         document.getElementById('test-title').innerText = problemSet + " 풀이";
 
-        fetch(`${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}`)
-        .then(res => res.json())
+        fetch(`${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`, { cache: "no-store" })
+        .then(res => {
+            if(!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
+            if(!data || !Array.isArray(data.questions)) {
+                throw new Error("Invalid quiz data");
+            }
+
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('main-layout').classList.remove('hidden');
             document.getElementById('home-btn').classList.remove('hidden');
