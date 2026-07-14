@@ -346,6 +346,8 @@ function getNameInitial_(char) {
     "류": "R",
     "홍": "H",
     "전": "J",
+    "즈": "Z",
+    "즌": "Z",
     "고": "K",
     "문": "M",
     "양": "Y",
