@@ -316,6 +316,7 @@ function formatPublicDate_(value) {
 function maskStudentName_(value) {
   var name = String(value || "").trim();
   if (!name) return "";
+  if (name.indexOf("즌") === 0 || name.indexOf("즈") === 0) return "Z**";
   var chars = Array.from(name);
   return getNameInitial_(chars[0]) + "**";
 }
