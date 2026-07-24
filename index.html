@@ -320,7 +320,7 @@
             subjectDiv.innerHTML = ""; 
             for (let subject in db[grade]) {
                 let subjectClass = "";
-                if (grade === "TOEFL" && /^(라이팅|writing)/i.test(subject)) {
+                if (grade === "TOEFL" && /(라이팅|writing)/i.test(subject)) {
                     subjectClass = "toefl-writing-btn";
                 }
                 if (grade === "TOEFL" && subject === "작문연습") {
