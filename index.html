@@ -71,6 +71,8 @@
 
         button { padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; background-color: #2b6cb0; color: white; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #1a365d; }
+        .toefl-writing-btn { background-color: #9b4d68; }
+        .toefl-writing-btn:hover { background-color: #823d56; }
         .back-btn { background-color: #a0aec0; margin-top: 10px; }
         .back-btn:hover { background-color: #718096; }
 
@@ -315,10 +317,10 @@
             const subjectDiv = document.getElementById('subject-btns');
             subjectDiv.innerHTML = ""; 
             for (let subject in db[grade]) {
-                const writingStyle = grade === "TOEFL" && subject === "작문연습"
-                    ? "background-color: #319795;"
+                const writingClass = grade === "TOEFL" && subject === "작문연습"
+                    ? "toefl-writing-btn"
                     : "";
-                subjectDiv.innerHTML += `<button style="${writingStyle}" onclick="selectSubject('${subject}')">${subject}</button>`;
+                subjectDiv.innerHTML += `<button class="${writingClass}" onclick="selectSubject('${subject}')">${subject}</button>`;
             }
             changeScreen(fromStep, 'step3');
         }
