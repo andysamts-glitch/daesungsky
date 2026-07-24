@@ -62,6 +62,14 @@
         .sentence-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .reset-btn { background: #718096; }
         .reset-btn:hover { background: #4a5568; }
+        .writing-prompt { white-space: pre-wrap; text-align: left; }
+        .writing-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; margin-bottom: 14px; border: 1px solid #cbd5e0; border-radius: 8px; background: #f7fafc; color: #2d3748; font-size: 14px; font-weight: bold; }
+        .writing-timer { color: #2b6cb0; font-size: 18px; }
+        .writing-timer.time-ended { color: #c53030; }
+        .writing-word-count { color: #4a5568; white-space: nowrap; }
+        .writing-goal { margin: -6px 0 10px 0; color: #718096; font-size: 13px; font-weight: bold; }
+        #writing-input { width: 100%; min-height: 310px; padding: 15px; box-sizing: border-box; resize: vertical; border: 2px solid #cbd5e0; border-radius: 8px; color: #2d3748; font-family: inherit; font-size: 16px; line-height: 1.65; }
+        #writing-input:focus { outline: none; border-color: #2b6cb0; }
         
         /* 🌟 정답 보기 버튼 (주관식용) */
         .hint-btn { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; background-color: #ecc94b; color: #744210; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
@@ -83,6 +91,8 @@
             .sentence-right-template { font-size: 17px; }
             .sentence-answer-box { font-size: 16px; }
             .sentence-slot { min-width: 72px; font-size: 14px; }
+            .writing-meta { align-items: flex-start; flex-direction: column; gap: 4px; }
+            #writing-input { min-height: 260px; font-size: 16px; }
         }
 
         @media (orientation: landscape) and (max-height: 520px) {
@@ -129,10 +139,28 @@
                 <button id="sentence-submit-btn" class="submit-btn" onclick="checkSentenceAnswer()">정답 제출</button>
             </div>
         </div>
+
+        <div id="writing-area" class="hidden">
+            <div class="writing-meta">
+                <span id="writing-timer" class="writing-timer">남은 시간 07:00</span>
+                <span id="writing-word-count" class="writing-word-count">0 words</span>
+            </div>
+            <p id="writing-goal" class="writing-goal"></p>
+            <textarea id="writing-input" placeholder="영어로 답안을 작성하세요." spellcheck="true"></textarea>
+            <button id="writing-submit-btn" class="submit-btn" style="margin-top: 12px;" onclick="submitWriting()">작성 완료 및 제출</button>
+            <div id="writing-submit-status" class="feedback-message"></div>
+        </div>
         
         <div id="feedback" class="feedback-message"></div>
         <button id="next-question-btn" class="submit-btn hidden" style="margin-top: 10px;" onclick="nextQuestion()">다음 문제</button>
     </div>
+</div>
+
+<div id="writing-result-screen" class="hidden" style="max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+    <h2>제출되었습니다!</h2>
+    <p id="writing-result-summary" style="font-size: 20px; color: #4a5568;"></p>
+    <p id="writing-saving-msg" style="color: #3182ce; font-weight: bold;">작성 내용을 저장하고 있습니다... ⏳</p>
+    <button class="submit-btn" style="margin-top: 20px;" onclick="location.href='index.html'">첫 화면으로 돌아가기</button>
 </div>
 
 <div id="result-screen" class="hidden" style="max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
@@ -155,6 +183,10 @@
     let selectedSubject = "";
     let testSaved = false;
     let currentPassage = "";
+    let writingMode = false;
+    let writingStartTime = 0;
+    let writingTimerId = null;
+    let writingSubmitted = false;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -203,6 +235,15 @@
             currentPassage = data.passage || "";
             document.getElementById('passage-container').dataset.hasPassage = currentPassage.trim() ? "true" : "false";
 
+            writingMode = isWritingPractice();
+            if (writingMode) {
+                if (!currentPassage.trim()) {
+                    throw new Error("Writing prompt is missing");
+                }
+                startWritingPractice();
+                return;
+            }
+
             if (!currentPassage.trim()) {
                 document.getElementById('passage-container').classList.add('hidden');
                 document.getElementById('quiz-container').classList.add('no-passage'); // 중앙 정렬 클래스 추가
@@ -223,6 +264,101 @@
             document.getElementById('loading').innerText = "데이터를 불러오는 데 실패했습니다. 새로고침 해주세요.";
         });
     };
+
+    function isWritingPractice() {
+        const subject = String(selectedSubject || "").trim();
+        const setName = String(problemSet || "").toLowerCase();
+        return subject === "작문연습" || /작문|이메일|토론|email|discussion/.test(setName);
+    }
+
+    function getWritingMeta() {
+        const setName = String(problemSet || "");
+        const lowerSetName = setName.toLowerCase();
+        const isEmail = /이메일|email/.test(lowerSetName);
+        let targetLevel = "Intermediate";
+
+        if (/초급|beginner/.test(lowerSetName)) targetLevel = "Beginner";
+        if (/상급|advanced/.test(lowerSetName)) targetLevel = "Advanced";
+
+        return {
+            type: isEmail ? "Write an Email" : "Academic Discussion",
+            timeLimitSeconds: isEmail ? 7 * 60 : 10 * 60,
+            targetLevel: targetLevel,
+            goalText: isEmail
+                ? "이메일은 문제의 모든 요구 사항을 충분히 답하세요."
+                : "토론 글은 100단어 이상을 목표로 작성하세요."
+        };
+    }
+
+    function startWritingPractice() {
+        const meta = getWritingMeta();
+        const passageContainer = document.getElementById('passage-container');
+        const quizContainer = document.getElementById('quiz-container');
+        const writingArea = document.getElementById('writing-area');
+
+        passageContainer.classList.remove('hidden');
+        quizContainer.classList.remove('no-passage');
+        renderWritingPrompt(currentPassage);
+
+        document.getElementById('progress-text').classList.add('hidden');
+        document.getElementById('question-text').innerText = meta.type === "Write an Email" ? "이메일 쓰기" : "토론 글쓰기";
+        document.getElementById('options-area').classList.add('hidden');
+        document.getElementById('subjective-area').classList.add('hidden');
+        document.getElementById('sentence-area').classList.add('hidden');
+        document.getElementById('feedback').classList.add('hidden');
+        document.getElementById('next-question-btn').classList.add('hidden');
+        document.getElementById('writing-goal').innerText = meta.goalText;
+        document.getElementById('writing-input').value = "";
+        document.getElementById('writing-submit-status').innerText = "";
+        writingArea.classList.remove('hidden');
+
+        writingStartTime = Date.now();
+        writingSubmitted = false;
+        updateWritingStatus();
+        if (writingTimerId) clearInterval(writingTimerId);
+        writingTimerId = setInterval(updateWritingStatus, 1000);
+
+        const writingInput = document.getElementById('writing-input');
+        writingInput.oninput = updateWritingStatus;
+        writingInput.focus();
+    }
+
+    function renderWritingPrompt(prompt) {
+        const passageContainer = document.getElementById('passage-container');
+        const passageText = document.getElementById('passage-text');
+        passageContainer.querySelector('h2').innerText = "📝 문제";
+        passageText.innerHTML = `<div class="writing-prompt">${formatPassageMarkup(prompt)}</div>`;
+    }
+
+    function updateWritingStatus() {
+        if (!writingMode || !writingStartTime) return;
+        const meta = getWritingMeta();
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - writingStartTime) / 1000));
+        const remainingSeconds = Math.max(meta.timeLimitSeconds - elapsedSeconds, 0);
+        const timer = document.getElementById('writing-timer');
+        const writingInput = document.getElementById('writing-input');
+
+        if (remainingSeconds > 0) {
+            timer.innerText = `남은 시간 ${formatTime(remainingSeconds)}`;
+            timer.classList.remove('time-ended');
+        } else {
+            timer.innerText = "시간 종료 - 계속 작성할 수 있습니다.";
+            timer.classList.add('time-ended');
+        }
+
+        document.getElementById('writing-word-count').innerText = `${countToeflWords(writingInput.value)} words`;
+    }
+
+    function formatTime(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function countToeflWords(text) {
+        const words = String(text || "").match(/[A-Za-z0-9]+(?:['’%-][A-Za-z0-9]+)*/g);
+        return words ? words.length : 0;
+    }
 
     function hasValidQuizAccess() {
         try {
@@ -671,6 +807,73 @@
         };
     }
 
+    function submitWriting() {
+        if (writingSubmitted) return;
+
+        const writingInput = document.getElementById('writing-input');
+        const submitButton = document.getElementById('writing-submit-btn');
+        const submitStatus = document.getElementById('writing-submit-status');
+        const content = writingInput.value.trim();
+        const meta = getWritingMeta();
+
+        if (!content) {
+            submitStatus.innerText = "작성한 답안이 없습니다. 내용을 입력한 뒤 제출하세요.";
+            submitStatus.style.color = "#c53030";
+            return;
+        }
+
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - writingStartTime) / 1000));
+        const wordCount = countToeflWords(content);
+        const formData = new URLSearchParams({
+            action: 'saveWriting',
+            studentName: studentName,
+            grade: selectedGrade,
+            subject: selectedSubject,
+            problemSet: problemSet,
+            writingType: meta.type,
+            targetLevel: meta.targetLevel,
+            timeLimitSeconds: String(meta.timeLimitSeconds),
+            elapsedSeconds: String(elapsedSeconds),
+            wordCount: String(wordCount),
+            prompt: currentPassage,
+            content: content
+        });
+
+        writingSubmitted = true;
+        if (writingTimerId) clearInterval(writingTimerId);
+        writingInput.disabled = true;
+        submitButton.disabled = true;
+        submitStatus.innerText = "작성 내용을 제출하고 있습니다...";
+        submitStatus.style.color = "#3182ce";
+
+        fetch(scriptURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.text();
+        })
+        .then(() => {
+            document.getElementById('main-layout').classList.add('hidden');
+            document.getElementById('home-btn').classList.add('hidden');
+            document.getElementById('writing-result-screen').classList.remove('hidden');
+            document.getElementById('writing-result-summary').innerText = `${wordCount} words 작성 · ${formatTime(elapsedSeconds)} 소요`;
+            document.getElementById('writing-saving-msg').innerText = "제출이 저장되었습니다.";
+            document.getElementById('writing-saving-msg').style.color = "#38a169";
+        })
+        .catch(() => {
+            writingSubmitted = false;
+            writingInput.disabled = false;
+            submitButton.disabled = false;
+            submitStatus.innerText = "저장에 실패했습니다. 인터넷 연결을 확인한 뒤 다시 제출하세요.";
+            submitStatus.style.color = "#c53030";
+            updateWritingStatus();
+            writingTimerId = setInterval(updateWritingStatus, 1000);
+        });
+    }
+
     function nextQuestion() {
         currentIndex++;
         if(currentIndex < quizData.length) {
@@ -686,7 +889,11 @@
     }
 
     function goHome() {
-        if (confirm("진행 중인 풀이를 끝내고 첫 화면으로 돌아갈까요?")) {
+        const message = writingMode
+            ? "작성 중인 글을 저장하지 않고 첫 화면으로 돌아갈까요?"
+            : "진행 중인 풀이를 끝내고 첫 화면으로 돌아갈까요?";
+        if (confirm(message)) {
+            if (writingTimerId) clearInterval(writingTimerId);
             location.href = "index.html";
         }
     }
