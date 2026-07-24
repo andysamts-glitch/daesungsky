@@ -62,11 +62,14 @@
         .sentence-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .reset-btn { background: #718096; }
         .reset-btn:hover { background: #4a5568; }
-        .writing-prompt { white-space: pre-wrap; text-align: left; }
+        .writing-prompt { text-align: left; }
+        .writing-prompt-line { min-height: 1.65em; margin: 0 0 10px 0; white-space: pre-wrap; }
+        .writing-prompt-title { margin: 0 0 14px 0; color: #1a365d; font-size: 20px; font-weight: 800; line-height: 1.5; white-space: pre-wrap; }
         .writing-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; margin-bottom: 14px; border: 1px solid #cbd5e0; border-radius: 8px; background: #f7fafc; color: #2d3748; font-size: 14px; font-weight: bold; }
         .writing-timer { color: #2b6cb0; font-size: 18px; }
         .writing-timer.time-ended { color: #c53030; }
         .writing-word-count { color: #4a5568; white-space: nowrap; }
+        .writing-word-count.goal-met { color: #276749; }
         .writing-goal { margin: -6px 0 10px 0; color: #718096; font-size: 13px; font-weight: bold; }
         #writing-input { width: 100%; min-height: 310px; padding: 15px; box-sizing: border-box; resize: vertical; border: 2px solid #cbd5e0; border-radius: 8px; color: #2d3748; font-family: inherit; font-size: 16px; line-height: 1.65; }
         #writing-input:focus { outline: none; border-color: #2b6cb0; }
@@ -284,9 +287,15 @@
             type: isEmail ? "Write an Email" : "Academic Discussion",
             timeLimitSeconds: isEmail ? 7 * 60 : 10 * 60,
             targetLevel: targetLevel,
+            wordGoalMin: isEmail
+                ? ({ Beginner: 80, Intermediate: 100, Advanced: 110 }[targetLevel])
+                : 100,
+            wordGoalMax: isEmail
+                ? ({ Beginner: 100, Intermediate: 120, Advanced: 130 }[targetLevel])
+                : null,
             goalText: isEmail
-                ? "이메일은 문제의 모든 요구 사항을 충분히 답하세요."
-                : "토론 글은 100단어 이상을 목표로 작성하세요."
+                ? `권장 분량: ${({ Beginner: 80, Intermediate: 100, Advanced: 110 }[targetLevel])}-${({ Beginner: 100, Intermediate: 120, Advanced: 130 }[targetLevel])} words`
+                : "최소 분량: 100 words"
         };
     }
 
@@ -327,7 +336,12 @@
         const passageContainer = document.getElementById('passage-container');
         const passageText = document.getElementById('passage-text');
         passageContainer.querySelector('h2').innerText = "📝 문제";
-        passageText.innerHTML = `<div class="writing-prompt">${formatPassageMarkup(prompt)}</div>`;
+        const lines = String(prompt || "").replace(/\r\n/g, "\n").split("\n");
+        passageText.innerHTML = `<div class="writing-prompt">${lines.map(line => {
+            const isTitle = /^#\s*/.test(line);
+            const content = formatPassageMarkup(line.replace(/^#\s*/, ""));
+            return `<div class="${isTitle ? "writing-prompt-title" : "writing-prompt-line"}">${content || "&nbsp;"}</div>`;
+        }).join("")}</div>`;
     }
 
     function updateWritingStatus() {
@@ -346,7 +360,13 @@
             timer.classList.add('time-ended');
         }
 
-        document.getElementById('writing-word-count').innerText = `${countToeflWords(writingInput.value)} words`;
+        const wordCount = countToeflWords(writingInput.value);
+        const wordCountLabel = meta.wordGoalMax
+            ? `${wordCount} / 권장 ${meta.wordGoalMin}-${meta.wordGoalMax} words`
+            : `${wordCount} / 최소 ${meta.wordGoalMin} words`;
+        const wordCountElement = document.getElementById('writing-word-count');
+        wordCountElement.innerText = wordCountLabel;
+        wordCountElement.classList.toggle('goal-met', wordCount >= meta.wordGoalMin);
     }
 
     function formatTime(totalSeconds) {
