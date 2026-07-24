@@ -315,7 +315,10 @@
             const subjectDiv = document.getElementById('subject-btns');
             subjectDiv.innerHTML = ""; 
             for (let subject in db[grade]) {
-                subjectDiv.innerHTML += `<button onclick="selectSubject('${subject}')">${subject}</button>`;
+                const writingStyle = grade === "TOEFL" && subject === "작문연습"
+                    ? "background-color: #319795;"
+                    : "";
+                subjectDiv.innerHTML += `<button style="${writingStyle}" onclick="selectSubject('${subject}')">${subject}</button>`;
             }
             changeScreen(fromStep, 'step3');
         }
