@@ -155,7 +155,6 @@ function saveTestCompletion_(e) {
   return ContentService.createTextOutput("성공");
 }
 
-+
 function getWritingSubmissionsSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("WritingSubmissions");
