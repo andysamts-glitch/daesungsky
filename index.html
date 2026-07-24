@@ -71,8 +71,10 @@
 
         button { padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; background-color: #2b6cb0; color: white; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #1a365d; }
-        .toefl-writing-btn { background-color: #c04f78; }
-        .toefl-writing-btn:hover { background-color: #a73d62; }
+        .toefl-writing-btn { background-color: #319795; }
+        .toefl-writing-btn:hover { background-color: #277a7a; }
+        .toefl-writing-practice-btn { background-color: #c04f78; }
+        .toefl-writing-practice-btn:hover { background-color: #a73d62; }
         .back-btn { background-color: #a0aec0; margin-top: 10px; }
         .back-btn:hover { background-color: #718096; }
 
@@ -317,10 +319,14 @@
             const subjectDiv = document.getElementById('subject-btns');
             subjectDiv.innerHTML = ""; 
             for (let subject in db[grade]) {
-                const writingClass = grade === "TOEFL" && subject === "작문연습"
-                    ? "toefl-writing-btn"
-                    : "";
-                subjectDiv.innerHTML += `<button class="${writingClass}" onclick="selectSubject('${subject}')">${subject}</button>`;
+                let subjectClass = "";
+                if (grade === "TOEFL" && /^(라이팅|writing)/i.test(subject)) {
+                    subjectClass = "toefl-writing-btn";
+                }
+                if (grade === "TOEFL" && subject === "작문연습") {
+                    subjectClass = "toefl-writing-practice-btn";
+                }
+                subjectDiv.innerHTML += `<button class="${subjectClass}" onclick="selectSubject('${subject}')">${subject}</button>`;
             }
             changeScreen(fromStep, 'step3');
         }
