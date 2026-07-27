@@ -159,13 +159,6 @@
     </div>
 </div>
 
-<div id="writing-result-screen" class="hidden" style="max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-    <h2>제출되었습니다!</h2>
-    <p id="writing-result-summary" style="font-size: 20px; color: #4a5568;"></p>
-    <p id="writing-saving-msg" style="color: #3182ce; font-weight: bold;">작성 내용을 저장하고 있습니다... ⏳</p>
-    <button class="submit-btn" style="margin-top: 20px;" onclick="location.href='index.html'">첫 화면으로 돌아가기</button>
-</div>
-
 <div id="result-screen" class="hidden" style="max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
     <h2>수고하셨습니다! 🎉</h2>
     <p style="font-size: 20px; color: #4a5568;">모든 문제를 완료했습니다.</p>
@@ -873,15 +866,13 @@
         })
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.text();
+            return response.json();
         })
-        .then(() => {
-            document.getElementById('main-layout').classList.add('hidden');
-            document.getElementById('home-btn').classList.add('hidden');
-            document.getElementById('writing-result-screen').classList.remove('hidden');
-            document.getElementById('writing-result-summary').innerText = `${wordCount} words 작성 · ${formatTime(elapsedSeconds)} 소요`;
-            document.getElementById('writing-saving-msg').innerText = "제출이 저장되었습니다.";
-            document.getElementById('writing-saving-msg').style.color = "#38a169";
+        .then(result => {
+            if (!result || result.result !== "success" || !result.submissionId) {
+                throw new Error("Writing submission ID is missing");
+            }
+            location.replace(`writing-result.html?id=${encodeURIComponent(result.submissionId)}`);
         })
         .catch(() => {
             writingSubmitted = false;

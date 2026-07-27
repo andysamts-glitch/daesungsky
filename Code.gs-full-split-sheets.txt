@@ -171,7 +171,9 @@ function getWritingSubmissionsSheet_() {
     "wordCount",
     "prompt",
     "content",
-    "copyPrompt"
+    "copyPrompt",
+    "submissionId",
+    "feedback"
   ];
 
   if (!sheet) {
@@ -179,9 +181,20 @@ function getWritingSubmissionsSheet_() {
     sheet.appendRow(headers);
   } else if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
+  } else {
+    ensureWritingSubmissionHeaders_(sheet, headers);
   }
 
   return sheet;
+}
+
+function ensureWritingSubmissionHeaders_(sheet, headers) {
+  var currentHeaders = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  headers.forEach(function(header, index) {
+    if (!currentHeaders[index]) {
+      sheet.getRange(1, index + 1).setValue(header);
+    }
+  });
 }
 
 function saveWritingSubmission_(e) {
@@ -195,6 +208,7 @@ function saveWritingSubmission_(e) {
     content: content
   };
   var copyPrompt = buildWritingCopyPrompt_(data);
+  var submissionId = Utilities.getUuid();
 
   sheet.appendRow([
     new Date(),
@@ -209,11 +223,16 @@ function saveWritingSubmission_(e) {
     e.parameter.wordCount || "",
     prompt,
     content,
-    copyPrompt
+    copyPrompt,
+    submissionId,
+    ""
   ]);
 
   return ContentService
-    .createTextOutput(JSON.stringify({ result: "success" }))
+    .createTextOutput(JSON.stringify({
+      result: "success",
+      submissionId: submissionId
+    }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -244,8 +263,67 @@ function htmlToPlainText_(value) {
     .replace(/&#0*39;/g, "'");
 }
 
+function getWritingSubmission_(e) {
+  var submissionId = String(e.parameter.submissionId || "").trim();
+  var result = { found: false };
+
+  if (!submissionId) {
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var sheet = getWritingSubmissionsSheet_();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var match = sheet
+    .getRange(2, 14, lastRow - 1, 1)
+    .createTextFinder(submissionId)
+    .matchEntireCell(true)
+    .findNext();
+
+  if (!match) {
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var row = sheet.getRange(match.getRow(), 1, 1, 15).getValues()[0];
+  result = {
+    found: true,
+    submittedAt: formatWritingSubmittedAt_(row[0]),
+    problemSet: String(row[4] || ""),
+    writingType: String(row[5] || ""),
+    targetLevel: String(row[6] || ""),
+    elapsedSeconds: Number(row[8] || 0),
+    wordCount: Number(row[9] || 0),
+    content: String(row[11] || ""),
+    feedback: String(row[14] || "")
+  };
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function formatWritingSubmittedAt_(value) {
+  if (!(value instanceof Date)) return String(value || "");
+  var timeZone = Session.getScriptTimeZone() || "Asia/Tokyo";
+  return Utilities.formatDate(value, timeZone, "yyyy.MM.dd HH:mm");
+}
+
 
 function doGet(e) {
+  // 작문 제출 결과: 개인 제출번호로 원문과 첨삭만 조회
+  if (e.parameter.action === "getWritingSubmission") {
+    return getWritingSubmission_(e);
+  }
+
   // 공개용 단어 결과 보기: Scores 시트에서 필요한 항목만 보내기
   if (e.parameter.action === "getPublicScoreResults") {
     return getPublicScoreResults_(e);

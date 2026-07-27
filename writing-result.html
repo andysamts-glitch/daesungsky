@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>작문 결과</title>
+    <style>
+        body { margin: 0; padding: 24px; background: #f4f6f9; color: #2d3748; font-family: 'Malgun Gothic', sans-serif; }
+        .page { width: min(920px, 100%); margin: 0 auto; }
+        .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+        h1 { margin: 0; color: #1a365d; font-size: 24px; line-height: 1.3; }
+        .subtitle { margin: 5px 0 0; color: #718096; font-size: 14px; }
+        .home-btn { flex: 0 0 auto; padding: 8px 12px; border: 0; border-radius: 8px; background: #ed8936; color: #fff; font: inherit; font-size: 13px; font-weight: bold; cursor: pointer; }
+        .home-btn:hover { background: #dd6b20; }
+        .loading, .error { padding: 38px 20px; text-align: center; font-size: 17px; font-weight: bold; }
+        .error { color: #c53030; }
+        .hidden { display: none !important; }
+        .summary { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 18px; color: #4a5568; font-size: 14px; font-weight: bold; }
+        .summary span { white-space: nowrap; }
+        .result-section { margin-bottom: 16px; padding: 22px; border-radius: 8px; background: #fff; box-shadow: 0 3px 9px rgba(0, 0, 0, 0.08); }
+        .result-section h2 { margin: 0 0 14px; color: #1a365d; font-size: 19px; }
+        .pending { margin: 0; padding: 14px; border: 1px solid #f6ad55; border-radius: 8px; background: #fffaf0; color: #9c4221; font-weight: bold; line-height: 1.55; }
+        .text-block { margin: 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #2d3748; font-family: inherit; font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .feedback-block { background: #f0fff4; border-color: #9ae6b4; }
+        .actions { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 22px 0 4px; }
+        .copy-btn { padding: 9px 13px; border: 1px solid #a0aec0; border-radius: 8px; background: #fff; color: #2d3748; font: inherit; font-size: 13px; font-weight: bold; cursor: pointer; }
+        .copy-btn:hover { background: #edf2f7; }
+        .copy-status { min-height: 18px; margin: 0; color: #276749; font-size: 13px; font-weight: bold; text-align: center; }
+        @media (max-width: 640px) {
+            body { padding: 14px; }
+            .page-header { align-items: center; }
+            h1 { font-size: 20px; }
+            .result-section { padding: 16px; }
+            .text-block { padding: 13px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div>
+                <h1>작문 결과</h1>
+                <p id="problem-set" class="subtitle"></p>
+            </div>
+            <button class="home-btn" onclick="location.href='index.html'">홈으로</button>
+        </header>
+
+        <div id="loading" class="loading">결과를 불러오는 중입니다...</div>
+        <div id="error" class="error hidden"></div>
+
+        <main id="result" class="hidden">
+            <div class="summary">
+                <span id="writing-type"></span>
+                <span id="writing-level"></span>
+                <span id="writing-words"></span>
+                <span id="writing-time"></span>
+                <span id="writing-date"></span>
+            </div>
+
+            <section class="result-section">
+                <h2>선생님 첨삭</h2>
+                <p id="feedback-pending" class="pending">첨삭 진행 중입니다.</p>
+                <div id="feedback-content" class="text-block feedback-block hidden"></div>
+            </section>
+
+            <section class="result-section">
+                <h2>내가 제출한 원문</h2>
+                <div id="original-content" class="text-block"></div>
+            </section>
+
+            <div class="actions">
+                <button id="copy-link-btn" class="copy-btn" onclick="copyResultLink()">결과 링크 복사</button>
+                <button class="copy-btn" onclick="loadResult()">새로고침</button>
+            </div>
+            <p id="copy-status" class="copy-status"></p>
+        </main>
+    </div>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
+        const submissionId = new URLSearchParams(location.search).get('id') || '';
+
+        window.onload = loadResult;
+
+        function loadResult() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+
+            if (!submissionId) {
+                showError('결과 주소가 올바르지 않습니다.');
+                return;
+            }
+
+            fetch(`${scriptURL}?action=getWritingSubmission&submissionId=${encodeURIComponent(submissionId)}&t=${Date.now()}`, { cache: 'no-store' })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data || !data.found) {
+                        throw new Error('Submission not found');
+                    }
+                    renderResult(data);
+                })
+                .catch(() => showError('결과를 불러오지 못했습니다. 잠시 후 다시 시도하세요.'));
+        }
+
+        function renderResult(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+            document.getElementById('problem-set').innerText = data.problemSet || '작문 제출';
+            document.getElementById('writing-type').innerText = data.writingType || '';
+            document.getElementById('writing-level').innerText = data.targetLevel || '';
+            document.getElementById('writing-words').innerText = `${Number(data.wordCount || 0)} words`;
+            document.getElementById('writing-time').innerText = `${formatTime(Number(data.elapsedSeconds || 0))} 작성`;
+            document.getElementById('writing-date').innerText = data.submittedAt || '';
+            document.getElementById('original-content').textContent = data.content || '';
+
+            const feedback = String(data.feedback || '').trim();
+            const pending = document.getElementById('feedback-pending');
+            const feedbackContent = document.getElementById('feedback-content');
+            if (feedback) {
+                pending.classList.add('hidden');
+                feedbackContent.textContent = feedback;
+                feedbackContent.classList.remove('hidden');
+            } else {
+                pending.classList.remove('hidden');
+                feedbackContent.classList.add('hidden');
+            }
+        }
+
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(Math.max(totalSeconds, 0) / 60);
+            const seconds = Math.max(totalSeconds, 0) % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function copyResultLink() {
+            const status = document.getElementById('copy-status');
+            if (!navigator.clipboard) {
+                status.innerText = '주소창의 결과 주소를 복사하세요.';
+                return;
+            }
+            navigator.clipboard.writeText(location.href)
+                .then(() => {
+                    status.innerText = '결과 링크가 복사되었습니다.';
+                })
+                .catch(() => {
+                    status.innerText = '주소창의 결과 주소를 복사하세요.';
+                });
+        }
+
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            const error = document.getElementById('error');
+            error.innerText = message;
+            error.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
