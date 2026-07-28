@@ -52,6 +52,7 @@ function doPost(e) {
       "",
       new Date()
     ]);
+    CacheService.getScriptCache().remove("writingSetPasswordMap_v1");
   }
   return ContentService.createTextOutput("성공");
 }
@@ -328,25 +329,42 @@ function formatWritingSubmittedAt_(value) {
 }
 
 function getWritingResultSets_() {
+  return writingResultJson_({
+    sets: Object.keys(getWritingSetPasswordMap_()).sort()
+  });
+}
+
+function getWritingSetPasswordMap_() {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "writingSetPasswordMap_v1";
+  var cached = cache.get(cacheKey);
+
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (error) {
+      cache.remove(cacheKey);
+    }
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Passages");
   var setMap = {};
 
   if (sheet && sheet.getLastRow() > 1) {
-    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
     rows.forEach(function(row) {
       var grade = normalizeGradeName_(row[0]);
       var subject = String(row[1] || "").trim();
       var problemSet = String(row[2] || "").trim();
-      if (grade === "TOEFL" && subject === "작문연습" && problemSet) {
-        setMap[problemSet] = true;
+      if (grade === "TOEFL" && subject === "작문연습" && problemSet && !setMap.hasOwnProperty(problemSet)) {
+        setMap[problemSet] = String(row[3] || "");
       }
     });
   }
 
-  return writingResultJson_({
-    sets: Object.keys(setMap).sort()
-  });
+  cache.put(cacheKey, JSON.stringify(setMap), 30);
+  return setMap;
 }
 
 function findWritingSubmission_(e) {
@@ -362,15 +380,14 @@ function findWritingSubmission_(e) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return writingResultJson_({ found: false });
 
-  var rows = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
-  for (var i = rows.length - 1; i >= 0; i--) {
-    var row = rows[i];
-    if (String(row[1] || "").trim() !== studentName) continue;
-    if (normalizeGradeName_(row[2]) !== "TOEFL") continue;
-    if (String(row[3] || "").trim() !== "작문연습") continue;
-    if (String(row[4] || "").trim() !== problemSet) continue;
+  // 답안, 첨삭 프롬프트, 첨삭문처럼 긴 열은 결과를 실제로 열 때만 읽는다.
+  var lookupRows = sheet.getRange(2, 2, lastRow - 1, 4).getValues();
+  var submissionIds = sheet.getRange(2, 14, lastRow - 1, 1).getValues();
+  for (var i = lookupRows.length - 1; i >= 0; i--) {
+    if (String(lookupRows[i][0] || "").trim() !== studentName) continue;
+    if (String(lookupRows[i][3] || "").trim() !== problemSet) continue;
 
-    var submissionId = String(row[13] || "").trim();
+    var submissionId = String(submissionIds[i][0] || "").trim();
     if (submissionId) {
       return writingResultJson_({
         found: true,
@@ -383,19 +400,8 @@ function findWritingSubmission_(e) {
 }
 
 function isWritingSetPasswordValid_(problemSet, password) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Passages");
-  if (!sheet || sheet.getLastRow() < 2) return false;
-
-  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
-    if (normalizeGradeName_(row[0]) !== "TOEFL") continue;
-    if (String(row[1] || "").trim() !== "작문연습") continue;
-    if (String(row[2] || "").trim() !== problemSet) continue;
-    return String(row[3] || "") === password;
-  }
-  return false;
+  var setMap = getWritingSetPasswordMap_();
+  return setMap.hasOwnProperty(problemSet) && setMap[problemSet] === password;
 }
 
 function writingResultJson_(data) {
