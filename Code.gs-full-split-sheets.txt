@@ -20,6 +20,11 @@ function doPost(e) {
     return saveWritingSubmission_(e);
   }
 
+  // 학생이 이름, 문제, 암호로 최근 작문 결과 찾기
+  if (e.parameter.action === "findWritingSubmission") {
+    return findWritingSubmission_(e);
+  }
+
   // 단어장 성적표 저장 기능
   if (e.parameter.action === "saveScore") {
     var scoreSheet = getScoresSheet_();
@@ -237,7 +242,7 @@ function saveWritingSubmission_(e) {
 }
 
 function buildWritingCopyPrompt_(data) {
-  return WRITING_CORRECTION_PROMPT + [
+  return getWritingCorrectionPrompt_() + [
     "",
     "",
     "--- STUDENT SUBMISSION (use this as Section 0 input) ---",
@@ -249,6 +254,11 @@ function buildWritingCopyPrompt_(data) {
     "Student Response:",
     data.content
   ].join("\n");
+}
+
+function getWritingCorrectionPrompt_() {
+  return String(WRITING_CORRECTION_PROMPT || "")
+    .replace(/^Exit code:[\s\S]*?Output:\n/, "");
 }
 
 function htmlToPlainText_(value) {
@@ -317,8 +327,90 @@ function formatWritingSubmittedAt_(value) {
   return Utilities.formatDate(value, timeZone, "yyyy.MM.dd HH:mm");
 }
 
+function getWritingResultSets_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Passages");
+  var setMap = {};
+
+  if (sheet && sheet.getLastRow() > 1) {
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    rows.forEach(function(row) {
+      var grade = normalizeGradeName_(row[0]);
+      var subject = String(row[1] || "").trim();
+      var problemSet = String(row[2] || "").trim();
+      if (grade === "TOEFL" && subject === "작문연습" && problemSet) {
+        setMap[problemSet] = true;
+      }
+    });
+  }
+
+  return writingResultJson_({
+    sets: Object.keys(setMap).sort()
+  });
+}
+
+function findWritingSubmission_(e) {
+  var studentName = String(e.parameter.studentName || "").trim();
+  var problemSet = String(e.parameter.problemSet || "").trim();
+  var password = String(e.parameter.password || "");
+
+  if (!studentName || !problemSet || !password || !isWritingSetPasswordValid_(problemSet, password)) {
+    return writingResultJson_({ found: false });
+  }
+
+  var sheet = getWritingSubmissionsSheet_();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return writingResultJson_({ found: false });
+
+  var rows = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var row = rows[i];
+    if (String(row[1] || "").trim() !== studentName) continue;
+    if (normalizeGradeName_(row[2]) !== "TOEFL") continue;
+    if (String(row[3] || "").trim() !== "작문연습") continue;
+    if (String(row[4] || "").trim() !== problemSet) continue;
+
+    var submissionId = String(row[13] || "").trim();
+    if (submissionId) {
+      return writingResultJson_({
+        found: true,
+        submissionId: submissionId
+      });
+    }
+  }
+
+  return writingResultJson_({ found: false });
+}
+
+function isWritingSetPasswordValid_(problemSet, password) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Passages");
+  if (!sheet || sheet.getLastRow() < 2) return false;
+
+  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    if (normalizeGradeName_(row[0]) !== "TOEFL") continue;
+    if (String(row[1] || "").trim() !== "작문연습") continue;
+    if (String(row[2] || "").trim() !== problemSet) continue;
+    return String(row[3] || "") === password;
+  }
+  return false;
+}
+
+function writingResultJson_(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 
 function doGet(e) {
+  // 작문 결과 찾기 화면의 문제세트 목록
+  if (e.parameter.action === "getWritingResultSets") {
+    return getWritingResultSets_(e);
+  }
+
   // 작문 제출 결과: 개인 제출번호로 원문과 첨삭만 조회
   if (e.parameter.action === "getWritingSubmission") {
     return getWritingSubmission_(e);
