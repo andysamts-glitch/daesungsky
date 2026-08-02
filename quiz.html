@@ -73,6 +73,18 @@
         .writing-goal { margin: -6px 0 10px 0; color: #718096; font-size: 13px; font-weight: bold; }
         #writing-input { width: 100%; min-height: 310px; padding: 15px; box-sizing: border-box; resize: vertical; border: 2px solid #cbd5e0; border-radius: 8px; color: #2d3748; font-family: inherit; font-size: 16px; line-height: 1.65; }
         #writing-input:focus { outline: none; border-color: #2b6cb0; }
+        .writing-leave-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(26, 32, 44, 0.48); box-sizing: border-box; }
+        .writing-leave-dialog { width: min(340px, 100%); padding: 20px; border-radius: 12px; background: #fff; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2); text-align: left; }
+        .writing-leave-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+        .writing-leave-logo { width: 30px; height: 30px; border: 1px solid #e2e8f0; border-radius: 50%; object-fit: cover; }
+        .writing-leave-title { margin: 0; color: #1a365d; font-size: 18px; }
+        .writing-leave-message { margin: 0; color: #4a5568; font-size: 15px; line-height: 1.55; }
+        .writing-leave-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
+        .writing-leave-actions button { padding: 10px 8px; border-radius: 8px; font: inherit; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .writing-stay-btn { border: 1px solid #a0aec0; background: #fff; color: #2d3748; }
+        .writing-stay-btn:hover { background: #edf2f7; }
+        .writing-exit-btn { border: 1px solid #dd6b20; background: #ed8936; color: #fff; }
+        .writing-exit-btn:hover { background: #dd6b20; }
         
         /* 🌟 정답 보기 버튼 (주관식용) */
         .hint-btn { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; background-color: #ecc94b; color: #744210; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
@@ -167,6 +179,20 @@
     <button class="submit-btn" style="margin-top: 20px;" onclick="location.href='index.html'">첫 화면으로 돌아가기</button>
 </div>
 
+<div id="writing-leave-modal" class="writing-leave-modal hidden" role="dialog" aria-modal="true" aria-labelledby="writing-leave-title">
+    <div class="writing-leave-dialog">
+        <div class="writing-leave-heading">
+            <img class="writing-leave-logo" src="andy.jpg" alt="선생님 로고">
+            <h2 id="writing-leave-title" class="writing-leave-title">잠깐만요</h2>
+        </div>
+        <p class="writing-leave-message">작성 중인 글이 사라집니다.<br>정말 나가시겠어요?</p>
+        <div class="writing-leave-actions">
+            <button class="writing-stay-btn" type="button" onclick="closeWritingLeaveModal()">계속 작성</button>
+            <button class="writing-exit-btn" type="button" onclick="confirmWritingExit()">나가기</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // 🌟 선생님의 고유 스크립트 주소
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -183,6 +209,8 @@
     let writingStartTime = 0;
     let writingTimerId = null;
     let writingSubmitted = false;
+    let writingLeaveGuardActive = false;
+    let writingExitConfirmed = false;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -321,9 +349,61 @@
         writingTimerId = setInterval(updateWritingStatus, 1000);
 
         const writingInput = document.getElementById('writing-input');
-        writingInput.oninput = updateWritingStatus;
+        writingInput.oninput = function() {
+            updateWritingStatus();
+            enableWritingLeaveGuard();
+        };
         writingInput.focus();
     }
+
+    function hasUnsavedWriting() {
+        const writingInput = document.getElementById('writing-input');
+        return writingMode && !writingSubmitted && !!writingInput && writingInput.value.trim().length > 0;
+    }
+
+    function enableWritingLeaveGuard() {
+        if (writingLeaveGuardActive || !hasUnsavedWriting()) return;
+        writingLeaveGuardActive = true;
+        history.pushState({ writingLeaveGuard: true }, '', location.href);
+    }
+
+    function showWritingLeaveModal() {
+        document.getElementById('writing-leave-modal').classList.remove('hidden');
+    }
+
+    function closeWritingLeaveModal() {
+        document.getElementById('writing-leave-modal').classList.add('hidden');
+    }
+
+    function leaveWritingPage() {
+        writingExitConfirmed = true;
+        closeWritingLeaveModal();
+        if (writingTimerId) clearInterval(writingTimerId);
+        location.href = 'index.html';
+    }
+
+    function confirmWritingExit() {
+        leaveWritingPage();
+    }
+
+    window.addEventListener('popstate', function() {
+        if (!writingLeaveGuardActive || writingExitConfirmed) return;
+
+        if (!hasUnsavedWriting()) {
+            writingExitConfirmed = true;
+            history.back();
+            return;
+        }
+
+        history.pushState({ writingLeaveGuard: true }, '', location.href);
+        showWritingLeaveModal();
+    });
+
+    window.addEventListener('beforeunload', function(event) {
+        if (!hasUnsavedWriting() || writingExitConfirmed) return;
+        event.preventDefault();
+        event.returnValue = '';
+    });
 
     function renderWritingPrompt(prompt) {
         const passageContainer = document.getElementById('passage-container');
@@ -900,11 +980,16 @@
     }
 
     function goHome() {
-        const message = writingMode
-            ? "작성 중인 글을 저장하지 않고 첫 화면으로 돌아갈까요?"
-            : "진행 중인 풀이를 끝내고 첫 화면으로 돌아갈까요?";
-        if (confirm(message)) {
-            if (writingTimerId) clearInterval(writingTimerId);
+        if (writingMode) {
+            if (hasUnsavedWriting()) {
+                showWritingLeaveModal();
+            } else {
+                leaveWritingPage();
+            }
+            return;
+        }
+
+        if (confirm("진행 중인 풀이를 끝내고 첫 화면으로 돌아갈까요?")) {
             location.href = "index.html";
         }
     }
