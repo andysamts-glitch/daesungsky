@@ -85,6 +85,8 @@
         .writing-stay-btn:hover { background: #1a365d; }
         .writing-exit-btn { border: 1px solid #a0aec0; background: #fff; color: #4a5568; }
         .writing-exit-btn:hover { background: #edf2f7; }
+        .writing-submit-confirm-btn { border: 1px solid #a0aec0; background: #fff; color: #4a5568; }
+        .writing-submit-confirm-btn:hover { background: #edf2f7; }
         
         /* 🌟 정답 보기 버튼 (주관식용) */
         .hint-btn { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; background-color: #ecc94b; color: #744210; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
@@ -162,7 +164,7 @@
             </div>
             <p id="writing-goal" class="writing-goal"></p>
             <textarea id="writing-input" placeholder="영어로 답안을 작성하세요." spellcheck="true"></textarea>
-            <button id="writing-submit-btn" class="submit-btn" style="margin-top: 12px;" onclick="submitWriting()">작성 완료 및 제출</button>
+            <button id="writing-submit-btn" class="submit-btn" type="button" style="margin-top: 12px;" onclick="requestWritingSubmit()">작성 완료 및 제출</button>
             <div id="writing-submit-status" class="feedback-message"></div>
         </div>
         
@@ -189,6 +191,19 @@
         <div class="writing-leave-actions">
             <button class="writing-stay-btn" type="button" onclick="closeWritingLeaveModal()">계속 작성</button>
             <button class="writing-exit-btn" type="button" onclick="confirmWritingExit()">나가기</button>
+        </div>
+    </div>
+</div>
+
+<div id="writing-submit-modal" class="writing-leave-modal hidden" role="dialog" aria-modal="true" aria-labelledby="writing-submit-title">
+    <div class="writing-leave-dialog">
+        <div class="writing-leave-heading">
+            <h2 id="writing-submit-title" class="writing-leave-title">제출할까요?</h2>
+        </div>
+        <p class="writing-leave-message">제출한 뒤에는 이 화면에서 글을 수정할 수 없습니다.</p>
+        <div class="writing-leave-actions">
+            <button class="writing-stay-btn" type="button" onclick="closeWritingSubmitModal()">계속 작성</button>
+            <button class="writing-submit-confirm-btn" type="button" onclick="confirmWritingSubmit()">제출하기</button>
         </div>
     </div>
 </div>
@@ -368,11 +383,35 @@
     }
 
     function showWritingLeaveModal() {
+        closeWritingSubmitModal();
         document.getElementById('writing-leave-modal').classList.remove('hidden');
     }
 
     function closeWritingLeaveModal() {
         document.getElementById('writing-leave-modal').classList.add('hidden');
+    }
+
+    function requestWritingSubmit() {
+        if (writingSubmitted) return;
+
+        const writingInput = document.getElementById('writing-input');
+        const submitStatus = document.getElementById('writing-submit-status');
+        if (!writingInput.value.trim()) {
+            submitStatus.innerText = "작성한 답안이 없습니다. 내용을 입력한 뒤 제출하세요.";
+            submitStatus.style.color = "#c53030";
+            return;
+        }
+
+        document.getElementById('writing-submit-modal').classList.remove('hidden');
+    }
+
+    function closeWritingSubmitModal() {
+        document.getElementById('writing-submit-modal').classList.add('hidden');
+    }
+
+    function confirmWritingSubmit() {
+        closeWritingSubmitModal();
+        submitWriting();
     }
 
     function leaveWritingPage() {
