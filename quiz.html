@@ -254,12 +254,10 @@
 
         document.getElementById('test-title').innerText = problemSet + " 풀이";
 
-        fetch(`${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`, { cache: "no-store" })
-        .then(res => {
-            if(!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            return res.json();
+        const loading = document.getElementById('loading');
+        const quizUrl = `${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
+        fetchJsonWithRetry(quizUrl, 3, 12000, (nextAttempt, maxAttempts) => {
+            loading.innerText = `연결이 불안정해 문제를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
         })
         .then(data => {
             if(!data || !Array.isArray(data.questions)) {
@@ -299,10 +297,38 @@
                 renderQuiz();
             }
         })
-        .catch(err => {
-            document.getElementById('loading').innerText = "데이터를 불러오는 데 실패했습니다. 새로고침 해주세요.";
+        .catch(() => {
+            loading.innerText = "문제를 불러오지 못했습니다. 잠시 후 새로고침 해주세요.";
         });
     };
+
+    function fetchJsonWithRetry(url, maxAttempts, timeoutMs, onRetry) {
+        let attempt = 0;
+
+        function request() {
+            attempt++;
+            const controller = typeof AbortController === "function" ? new AbortController() : null;
+            const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+            const options = { cache: "no-store" };
+            if (controller) options.signal = controller.signal;
+
+            return fetch(url, options)
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .finally(() => {
+                if (timeoutId) clearTimeout(timeoutId);
+            })
+            .catch(error => {
+                if (attempt >= maxAttempts) throw error;
+                if (onRetry) onRetry(attempt + 1, maxAttempts);
+                return new Promise(resolve => setTimeout(resolve, attempt * 900)).then(request);
+            });
+        }
+
+        return request();
+    }
 
     function isWritingPractice() {
         const subject = String(selectedSubject || "").trim();
