@@ -189,6 +189,7 @@ function playWordChain_(e) {
     var nextTotal = Number(state.totalWords || 0) + 1;
     var nextPlayerCounts = incrementWordChainPlayerCount_(state.playerCounts, playerName);
     var now = new Date();
+    state.sheet.getRange(state.rowNumber, 1).setNumberFormat("@");
     state.sheet.getRange(state.rowNumber, 1, 1, 10).setValues([[
       state.dateKey,
       state.seedWord,
@@ -202,7 +203,9 @@ function playWordChain_(e) {
       nextPlayerCounts
     ]]);
 
-    getWordChainEntriesSheet_(ss).appendRow([
+    var entriesSheet = getWordChainEntriesSheet_(ss);
+    entriesSheet.getRange(entriesSheet.getLastRow() + 1, 1).setNumberFormat("@");
+    entriesSheet.appendRow([
       state.dateKey,
       nextTotal,
       now,
@@ -444,26 +447,36 @@ function getOrCreateWordChainState_(ss) {
     wordChainUsedWordsWith_("", seed.word),
     "[]"
   ]];
+  sheet.getRange(rowNumber, 1).setNumberFormat("@");
   sheet.getRange(rowNumber, 1, 1, 10).setValues(values);
   return wordChainStateFromRow_(sheet, rowNumber, values[0]);
 }
 
 function findWordChainState_(sheet, dateKey) {
   if (sheet.getLastRow() < 2) return null;
-  var match = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1)
-    .createTextFinder(dateKey)
-    .matchEntireCell(true)
-    .findNext();
-  if (!match) return null;
-  var rowNumber = match.getRow();
-  return wordChainStateFromRow_(sheet, rowNumber, sheet.getRange(rowNumber, 1, 1, 10).getValues()[0]);
+  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+  var latestIndex = -1;
+  var latestUpdatedAt = -1;
+
+  for (var i = 0; i < rows.length; i++) {
+    if (wordChainDateKeyFromValue_(rows[i][0]) !== dateKey) continue;
+    var updatedAt = rows[i][6] instanceof Date ? rows[i][6].getTime() : new Date(rows[i][6]).getTime();
+    if (isNaN(updatedAt)) updatedAt = 0;
+    if (latestIndex === -1 || updatedAt >= latestUpdatedAt) {
+      latestIndex = i;
+      latestUpdatedAt = updatedAt;
+    }
+  }
+
+  if (latestIndex === -1) return null;
+  return wordChainStateFromRow_(sheet, latestIndex + 2, rows[latestIndex]);
 }
 
 function wordChainStateFromRow_(sheet, rowNumber, row) {
   return {
     sheet: sheet,
     rowNumber: rowNumber,
-    dateKey: String(row[0] || ""),
+    dateKey: wordChainDateKeyFromValue_(row[0]),
     seedWord: String(row[1] || ""),
     currentWord: String(row[2] || ""),
     currentMeaning: String(row[3] || ""),
