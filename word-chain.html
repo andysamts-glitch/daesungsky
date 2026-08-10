@@ -298,7 +298,8 @@
                 hintShownForWord = '';
                 elements.hintPanel.classList.add('hidden');
                 elements.acceptedPanel.classList.add('hidden');
-                setStatus('다른 학생이 새 단어를 이어 썼습니다.', '');
+                const playerName = data.lastPlayerName || '다른 학생';
+                setStatus(`${playerName}님이 ${data.currentWord}를 이어 썼습니다.`, '');
             }
 
             elements.currentWord.textContent = data.currentWord || '...';
