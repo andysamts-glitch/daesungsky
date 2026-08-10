@@ -152,7 +152,7 @@ function playWordChain_(e) {
     }
 
     if (!requestedWord) {
-      return wordChainFailure_(ss, state, playerName, "영어 단어만 입력해 주세요.");
+      return wordChainFailure_(ss, state, playerName, "영어 알파벳으로 된 4글자 이상 단어만 입력해 주세요.");
     }
 
     if (requestedWord.charAt(0) !== state.requiredLetter) {
@@ -589,7 +589,7 @@ function wordChainDateKeyFromValue_(value) {
 
 function normalizeWordChainWord_(value) {
   var word = String(value || "").trim();
-  if (!/^[A-Za-z]+$/.test(word)) return "";
+  if (!/^[A-Za-z]{4,}$/.test(word)) return "";
   return word.toLowerCase();
 }
 

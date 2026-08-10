@@ -307,8 +307,8 @@
             elements.requiredLetter.textContent = (data.requiredLetter || '?').toUpperCase();
             elements.totalCount.textContent = String(data.totalCount || 0);
             elements.myCount.textContent = String(data.myCount || 0);
-            elements.entryLabel.textContent = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 영어 단어`;
-            elements.wordInput.placeholder = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 단어`;
+            elements.entryLabel.textContent = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 4글자 이상 영어 단어`;
+            elements.wordInput.placeholder = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 4글자 이상 단어`;
             elements.hintBtn.disabled = !(data.hints && data.hints.length);
             renderHistory(data.recentEntries || []);
         }
@@ -357,6 +357,11 @@
             if (submitting || !gameState) return;
             const word = elements.wordInput.value.trim();
             if (!word) {
+                elements.wordInput.focus();
+                return;
+            }
+            if (!/^[A-Za-z]{4,}$/.test(word)) {
+                setStatus('영어 알파벳으로 된 4글자 이상 단어만 입력해 주세요.', 'error');
                 elements.wordInput.focus();
                 return;
             }
