@@ -298,8 +298,8 @@
                 hintShownForWord = '';
                 elements.hintPanel.classList.add('hidden');
                 elements.acceptedPanel.classList.add('hidden');
-                const playerName = data.lastPlayerName || '다른 학생';
-                setStatus(`${playerName}님이 ${data.currentWord}를 이어 썼습니다.`, '');
+                const playerLabel = data.lastPlayerName ? `${data.lastPlayerName}님` : '다른 학생';
+                setStatus(`${playerLabel}이 ${data.currentWord}를 이어 썼습니다.`, '');
             }
 
             elements.currentWord.textContent = data.currentWord || '...';
