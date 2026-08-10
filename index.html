@@ -71,7 +71,7 @@
         .voca-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: none; overflow: visible; }
         .voca-half { grid-column: span 2; }
         .voca-quarter { grid-column: span 1; padding-left: 8px; padding-right: 8px; }
-        .word-relay-btn { grid-column: 1 / -1; padding: 9px 12px; border: 1px solid #4f9b97; border-radius: 7px; background: #fff; color: #247774; font-size: 14px; }
+        .word-relay-btn { grid-column: span 1; padding: 8px 6px; border: 1px solid #4f9b97; border-radius: 7px; background: #fff; color: #247774; font-size: 14px; }
         .word-relay-btn:hover { background: #eef8f7; color: #17625f; }
 
         button { padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; background-color: #2b6cb0; color: white; cursor: pointer; transition: 0.3s; }
@@ -145,11 +145,11 @@
                 <h3 class="section-title">단어 테스트</h3>
                 <div class="voca-grid">
                     <button class="voca-half" onclick="location.href='voca.html?type=toefl'" style="background-color: #dd6b20;">TOEFL 단어</button>
-                    <button class="voca-half" onclick="location.href='voca.html?type=toeic'" style="background-color: #3182ce;">TOEIC 단어</button>
+                    <button class="voca-quarter" onclick="location.href='voca.html?type=toeic'" style="background-color: #3182ce;">TOEIC 단어</button>
+                    <button class="word-relay-btn" onclick="location.href='word-chain.html'">끝말잇기</button>
                     <button class="voca-half" onclick="location.href='voca.html?type=SAT'" style="background-color: #38a169;">SAT 단어</button>
                     <button class="voca-quarter" onclick="location.href='voca.html?type=교과서_중등'" style="background-color: #805ad5;">중등</button>
                     <button class="voca-quarter" onclick="location.href='voca.html?type=교과서_고등'" style="background-color: #6b46c1;">고등</button>
-                    <button class="word-relay-btn" onclick="location.href='word-chain.html'">영어 끝말잇기</button>
                 </div>
             </div>
 
