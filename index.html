@@ -87,32 +87,27 @@
         input[type="password"] { letter-spacing: 5px; }
         .hidden { display: none !important; }
 
-        /* 우측 상단 선생님 로그인 버튼 디자인 */
-        .admin-login-btn {
-            position: absolute; 
-            top: 20px; 
-            right: 20px; 
-            padding: 8px 15px; 
-            font-size: 14px; 
-            background-color: transparent; 
-            color: #718096; 
-            border: 1px solid #cbd5e0; 
-            border-radius: 5px; 
-            cursor: pointer; 
-        }
-        .admin-login-btn:hover {
-            background-color: #e2e8f0; 
-            color: #1a365d;
-        }
         @media (max-width: 520px) {
-            .container { padding: 24px 18px; margin: 24px auto; }
-            .contact-area { margin-bottom: 20px; }
+            body { padding: 8px; }
+            .container { padding: 16px 14px; margin: 8px auto; }
+            .logo { width: 88px; margin-bottom: 2px; }
+            .contact-area { margin-bottom: 8px; font-size: 13px; line-height: 1.35; }
+            .contact-phone { margin-bottom: 4px; }
+            .contact-links { gap: 4px; }
+            .app-link { padding: 4px 8px; font-size: 12px; }
+            h2 { margin-bottom: 8px; font-size: 20px; }
+            .section-card { padding: 12px; margin-bottom: 10px; }
+            .section-title { margin-bottom: 9px; font-size: 16px; }
+            .voca-grid { gap: 7px; }
+            .voca-grid button { padding: 10px 4px; font-size: 14px; }
+            .word-relay-btn { padding: 8px 4px; }
+            .btn-group { gap: 8px; }
+            .calculator-wrap { margin-bottom: 10px; }
+            .public-results-row, .utility-row { margin-top: 6px; }
         }
     </style>
 </head>
 <body>
-
-    <button class="admin-login-btn" onclick="location.href='admin.html'">👨‍🏫 선생님 로그인</button>
 
     <div class="container">
         <img src="작은로고.jpg" alt="대성 SKY 학원 로고" class="logo">
