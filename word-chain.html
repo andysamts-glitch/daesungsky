@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TOEFL과 TOEIC 단어로 함께 이어 가는 대성 SKY 영어 끝말잇기입니다.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="https://www.dssky.co.kr/word-chain.html">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Word Relay | 대성 SKY</title>
+    <style>
+        :root {
+            --ink: #26313d;
+            --muted: #647181;
+            --line: #dbe2e8;
+            --page: #f4f6f8;
+            --teal: #197c79;
+            --teal-dark: #126460;
+            --blue: #2d6fb7;
+            --blue-soft: #edf5ff;
+            --green: #247253;
+            --green-soft: #eef8f2;
+            --coral: #b44949;
+            --coral-soft: #fff1f1;
+            --amber: #a56416;
+            --amber-soft: #fff8e9;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background: var(--page); color: var(--ink); font-family: "Malgun Gothic", Arial, sans-serif; }
+        button, input { font: inherit; }
+        button { cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: 0.62; }
+        .page { width: min(760px, calc(100% - 32px)); margin: 24px auto 40px; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+        .brand { min-width: 0; }
+        .brand h1 { margin: 0; color: var(--teal-dark); font-size: 23px; line-height: 1.15; letter-spacing: 0; }
+        .brand p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .home-btn, .name-btn { flex: 0 0 auto; border: 1px solid #d7a45d; background: #fff; color: #a65d10; border-radius: 6px; padding: 7px 10px; font-size: 13px; font-weight: 700; }
+        .home-btn:hover, .name-btn:hover { background: #fff5e7; }
+        .hidden { display: none !important; }
+
+        .start-screen { padding: 32px 22px 36px; text-align: center; }
+        .start-screen h2 { margin: 0; color: var(--ink); font-size: 21px; }
+        .start-screen p { margin: 9px 0 22px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+        .name-entry { width: min(360px, 100%); margin: 0 auto; }
+        .name-entry label { display: block; margin-bottom: 8px; text-align: left; color: var(--ink); font-size: 14px; font-weight: 700; }
+        .name-entry input, .word-entry input { width: 100%; min-width: 0; border: 1px solid #bcc8d3; border-radius: 6px; background: #fff; color: var(--ink); outline: none; }
+        .name-entry input { padding: 12px 13px; font-size: 16px; }
+        .name-entry input:focus, .word-entry input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(45, 111, 183, 0.13); }
+        .start-btn, .submit-btn { border: 0; border-radius: 6px; background: var(--teal); color: #fff; font-weight: 700; }
+        .start-btn { width: 100%; margin-top: 10px; padding: 12px 14px; }
+        .start-btn:hover, .submit-btn:hover { background: var(--teal-dark); }
+
+        .game-screen { padding: 0 20px 24px; }
+        .player-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+        .player-row strong { color: var(--ink); }
+        .name-btn { border-color: #c6d1dc; color: #526273; padding: 5px 8px; font-size: 12px; }
+        .name-btn:hover { background: #f2f5f8; }
+        .chain-stage { padding: 22px 0 20px; text-align: center; border-bottom: 1px solid var(--line); }
+        .stage-label { margin: 0 0 7px; color: var(--muted); font-size: 13px; font-weight: 700; }
+        .current-word { margin: 0; color: var(--teal-dark); font-size: clamp(30px, 8vw, 46px); font-weight: 800; line-height: 1.08; overflow-wrap: anywhere; letter-spacing: 0; }
+        .current-meaning { min-height: 22px; margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+        .next-letter { display: inline-flex; align-items: baseline; justify-content: center; gap: 6px; margin-top: 15px; color: var(--ink); font-size: 16px; font-weight: 700; }
+        .next-letter strong { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 19px; }
+        .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+        .stat { padding: 10px 12px; border-left: 3px solid var(--blue); background: var(--blue-soft); text-align: left; }
+        .stat:nth-child(2) { border-left-color: var(--green); background: var(--green-soft); }
+        .stat span { display: block; color: var(--muted); font-size: 12px; }
+        .stat strong { display: block; margin-top: 3px; color: var(--ink); font-size: 19px; }
+        .entry-panel { padding: 18px 0 14px; }
+        .entry-label { display: block; margin-bottom: 8px; color: var(--ink); font-size: 14px; font-weight: 700; }
+        .word-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .word-entry input { padding: 12px 13px; font-size: 18px; letter-spacing: 0; text-transform: lowercase; }
+        .submit-btn { min-width: 76px; padding: 10px 14px; }
+        .action-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+        .hint-btn { border: 1px solid #d7b56c; border-radius: 6px; background: #fff; color: var(--amber); padding: 7px 10px; font-size: 13px; font-weight: 700; }
+        .hint-btn:hover { background: var(--amber-soft); }
+        .status { flex: 1 1 auto; min-height: 20px; margin: 0; text-align: right; color: var(--muted); font-size: 13px; line-height: 1.45; }
+        .status.success { color: var(--green); font-weight: 700; }
+        .status.error { color: var(--coral); font-weight: 700; }
+        .hint-panel { margin: 2px 0 15px; padding: 14px; border: 1px solid #ecd39e; background: var(--amber-soft); }
+        .hint-panel h3 { margin: 0; color: #795116; font-size: 14px; }
+        .hint-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin: 10px 0 0; padding: 0; list-style: none; }
+        .hint-list li { min-width: 0; padding: 8px 6px; border: 1px solid #eddbb1; background: #fff; color: #5d4b2c; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+        .accepted-panel { margin: 2px 0 15px; padding: 15px; border: 1px solid #b8d9c6; background: var(--green-soft); text-align: left; }
+        .accepted-title { margin: 0; color: var(--green); font-size: 14px; }
+        .accepted-word { margin: 5px 0 0; color: #16563f; font-size: 21px; font-weight: 800; overflow-wrap: anywhere; }
+        .related-label { margin: 13px 0 7px; color: #466c5b; font-size: 12px; font-weight: 700; }
+        .related-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
+        .related-list li { min-width: 0; padding: 8px; border: 1px solid #cfe5d8; background: #fff; overflow-wrap: anywhere; }
+        .related-list strong { display: block; color: var(--ink); font-size: 13px; }
+        .related-list span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+        .history { margin-top: 7px; border-top: 1px solid var(--line); }
+        .history-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px 0 10px; }
+        .history-header h2 { margin: 0; color: var(--ink); font-size: 16px; }
+        .history-header span { color: var(--muted); font-size: 12px; }
+        .history-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid #eaf0f4; }
+        .history-list li { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 42px; padding: 8px 2px; border-bottom: 1px solid #eaf0f4; }
+        .history-player { color: var(--muted); font-size: 12px; font-weight: 700; }
+        .history-word { min-width: 0; color: var(--ink); font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+        .history-meaning { color: var(--muted); font-size: 12px; text-align: right; overflow-wrap: anywhere; }
+        .empty-history { display: block !important; padding: 18px 0 !important; color: var(--muted); font-size: 13px; text-align: center; }
+        .loading { padding: 36px 0; color: var(--muted); text-align: center; font-size: 14px; }
+
+        @media (max-width: 560px) {
+            .page { width: 100%; min-height: 100vh; margin: 0; border: 0; border-radius: 0; }
+            .topbar { padding: 14px 16px; }
+            .brand h1 { font-size: 21px; }
+            .game-screen { padding: 0 16px 22px; }
+            .hint-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .related-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .related-list li:last-child:nth-child(odd) { grid-column: span 2; }
+            .history-list li { grid-template-columns: 48px minmax(0, 1fr); gap: 7px; }
+            .history-meaning { grid-column: 2; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div class="brand">
+                <h1>WORD RELAY</h1>
+                <p>TOEFL · TOEIC vocabulary</p>
+            </div>
+            <button class="home-btn" type="button" onclick="location.href='index.html'">홈으로</button>
+        </header>
+
+        <section id="start-screen" class="start-screen">
+            <h2>오늘의 영어 끝말잇기</h2>
+            <p>한 단어를 내고, 다음 학생이 이어 갑니다.</p>
+            <div class="name-entry">
+                <label for="student-name">이름</label>
+                <input id="student-name" type="text" maxlength="20" autocomplete="name" placeholder="이름을 입력하세요">
+                <button id="start-btn" class="start-btn" type="button">시작하기</button>
+            </div>
+        </section>
+
+        <section id="game-screen" class="game-screen hidden" aria-live="polite">
+            <div class="player-row">
+                <span><strong id="player-name"></strong> 님이 참여 중</span>
+                <button id="change-name-btn" class="name-btn" type="button">이름 변경</button>
+            </div>
+
+            <section class="chain-stage" aria-label="현재 끝말잇기 단어">
+                <p class="stage-label">현재 단어</p>
+                <p id="current-word" class="current-word">...</p>
+                <p id="current-meaning" class="current-meaning"></p>
+                <p class="next-letter"><strong id="required-letter">?</strong> 로 시작하는 단어</p>
+            </section>
+
+            <section class="stats" aria-label="오늘의 참여 기록">
+                <div class="stat"><span>오늘 이어진 단어</span><strong id="total-count">0</strong></div>
+                <div class="stat"><span>내가 낸 단어</span><strong id="my-count">0</strong></div>
+            </section>
+
+            <section class="entry-panel" aria-label="단어 입력">
+                <label id="entry-label" class="entry-label" for="word-input">영어 단어 입력</label>
+                <div class="word-entry">
+                    <input id="word-input" type="text" inputmode="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="영어 단어">
+                    <button id="submit-btn" class="submit-btn" type="button">등록</button>
+                </div>
+                <div class="action-row">
+                    <button id="hint-btn" class="hint-btn" type="button">한국어 힌트 5개</button>
+                    <p id="status" class="status" role="status"></p>
+                </div>
+            </section>
+
+            <section id="hint-panel" class="hint-panel hidden" aria-live="polite">
+                <h3 id="hint-title">힌트</h3>
+                <ul id="hint-list" class="hint-list"></ul>
+            </section>
+
+            <section id="accepted-panel" class="accepted-panel hidden" aria-live="polite">
+                <p class="accepted-title">등록한 단어</p>
+                <p id="accepted-word" class="accepted-word"></p>
+                <p class="related-label">이런 단어도 있어요.</p>
+                <ul id="related-list" class="related-list"></ul>
+            </section>
+
+            <section class="history" aria-label="최근 릴레이">
+                <div class="history-header">
+                    <h2>최근 릴레이</h2>
+                    <span>이름은 이니셜로 표시됩니다.</span>
+                </div>
+                <ul id="history-list" class="history-list"></ul>
+            </section>
+        </section>
+    </main>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
+        const refreshMs = 20000;
+
+        let studentName = '';
+        let gameState = null;
+        let hintShownForWord = '';
+        let submitting = false;
+        let refreshTimer = null;
+
+        const elements = {
+            startScreen: document.getElementById('start-screen'),
+            gameScreen: document.getElementById('game-screen'),
+            studentName: document.getElementById('student-name'),
+            startBtn: document.getElementById('start-btn'),
+            playerName: document.getElementById('player-name'),
+            changeNameBtn: document.getElementById('change-name-btn'),
+            currentWord: document.getElementById('current-word'),
+            currentMeaning: document.getElementById('current-meaning'),
+            requiredLetter: document.getElementById('required-letter'),
+            totalCount: document.getElementById('total-count'),
+            myCount: document.getElementById('my-count'),
+            entryLabel: document.getElementById('entry-label'),
+            wordInput: document.getElementById('word-input'),
+            submitBtn: document.getElementById('submit-btn'),
+            hintBtn: document.getElementById('hint-btn'),
+            hintPanel: document.getElementById('hint-panel'),
+            hintTitle: document.getElementById('hint-title'),
+            hintList: document.getElementById('hint-list'),
+            acceptedPanel: document.getElementById('accepted-panel'),
+            acceptedWord: document.getElementById('accepted-word'),
+            relatedList: document.getElementById('related-list'),
+            status: document.getElementById('status'),
+            historyList: document.getElementById('history-list')
+        };
+
+        window.addEventListener('load', () => {
+            const savedName = localStorage.getItem('wordRelayStudentName') || '';
+            elements.studentName.value = savedName;
+            elements.startBtn.addEventListener('click', startGame);
+            elements.studentName.addEventListener('keydown', event => {
+                if (event.key === 'Enter') startGame();
+            });
+            elements.submitBtn.addEventListener('click', submitWord);
+            elements.wordInput.addEventListener('keydown', event => {
+                if (event.key === 'Enter') submitWord();
+            });
+            elements.hintBtn.addEventListener('click', showHints);
+            elements.changeNameBtn.addEventListener('click', changeName);
+        });
+
+        function startGame() {
+            const name = elements.studentName.value.trim();
+            if (!name) {
+                elements.studentName.focus();
+                return;
+            }
+
+            studentName = name;
+            localStorage.setItem('wordRelayStudentName', studentName);
+            elements.playerName.textContent = studentName;
+            elements.startScreen.classList.add('hidden');
+            elements.gameScreen.classList.remove('hidden');
+            setStatus('오늘의 단어를 불러오는 중입니다...', '');
+            refreshGame(true);
+
+            if (refreshTimer) window.clearInterval(refreshTimer);
+            refreshTimer = window.setInterval(() => {
+                if (!submitting) refreshGame(false);
+            }, refreshMs);
+        }
+
+        function changeName() {
+            if (!window.confirm('참여 이름을 바꿀까요?')) return;
+            window.clearInterval(refreshTimer);
+            studentName = '';
+            gameState = null;
+            hintShownForWord = '';
+            elements.wordInput.value = '';
+            elements.hintPanel.classList.add('hidden');
+            elements.acceptedPanel.classList.add('hidden');
+            elements.gameScreen.classList.add('hidden');
+            elements.startScreen.classList.remove('hidden');
+            elements.studentName.focus();
+        }
+
+        async function refreshGame(focusInput) {
+            if (!studentName) return;
+
+            try {
+                const url = `${scriptURL}?action=getWordChain&studentName=${encodeURIComponent(studentName)}&t=${Date.now()}`;
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!data || !data.ok) throw new Error(data && data.message ? data.message : 'load failed');
+                renderGame(data);
+                if (focusInput) elements.wordInput.focus();
+            } catch (error) {
+                setStatus('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+            }
+        }
+
+        function renderGame(data) {
+            const oldWord = gameState && gameState.currentWord;
+            gameState = data;
+
+            if (oldWord && oldWord !== data.currentWord) {
+                hintShownForWord = '';
+                elements.hintPanel.classList.add('hidden');
+                elements.acceptedPanel.classList.add('hidden');
+                setStatus('다른 학생이 새 단어를 이어 썼습니다.', '');
+            }
+
+            elements.currentWord.textContent = data.currentWord || '...';
+            elements.currentMeaning.textContent = data.currentMeaning || '';
+            elements.requiredLetter.textContent = (data.requiredLetter || '?').toUpperCase();
+            elements.totalCount.textContent = String(data.totalCount || 0);
+            elements.myCount.textContent = String(data.myCount || 0);
+            elements.entryLabel.textContent = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 영어 단어`;
+            elements.wordInput.placeholder = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 단어`;
+            elements.hintBtn.disabled = !(data.hints && data.hints.length);
+            renderHistory(data.recentEntries || []);
+        }
+
+        function renderHistory(entries) {
+            elements.historyList.replaceChildren();
+
+            if (!entries.length) {
+                const empty = document.createElement('li');
+                empty.className = 'empty-history';
+                empty.textContent = '첫 단어를 이어 보세요.';
+                elements.historyList.appendChild(empty);
+                return;
+            }
+
+            entries.forEach(entry => {
+                const item = document.createElement('li');
+                const player = document.createElement('span');
+                const word = document.createElement('span');
+                const meaning = document.createElement('span');
+                player.className = 'history-player';
+                word.className = 'history-word';
+                meaning.className = 'history-meaning';
+                player.textContent = entry.playerName || '**';
+                word.textContent = entry.word || '';
+                meaning.textContent = entry.meaning || '';
+                item.append(player, word, meaning);
+                elements.historyList.appendChild(item);
+            });
+        }
+
+        function showHints() {
+            if (!gameState || !gameState.hints || !gameState.hints.length) return;
+            hintShownForWord = gameState.currentWord;
+            elements.hintTitle.textContent = `${(gameState.requiredLetter || '?').toUpperCase()}로 시작하는 단어 힌트`;
+            elements.hintList.replaceChildren();
+            gameState.hints.forEach(hint => {
+                const item = document.createElement('li');
+                item.textContent = hint;
+                elements.hintList.appendChild(item);
+            });
+            elements.hintPanel.classList.remove('hidden');
+        }
+
+        async function submitWord() {
+            if (submitting || !gameState) return;
+            const word = elements.wordInput.value.trim();
+            if (!word) {
+                elements.wordInput.focus();
+                return;
+            }
+
+            submitting = true;
+            elements.submitBtn.disabled = true;
+            elements.hintBtn.disabled = true;
+            setStatus('확인 중입니다...', '');
+
+            const body = new URLSearchParams({
+                action: 'playWordChain',
+                studentName,
+                word,
+                hintUsed: hintShownForWord === gameState.currentWord ? 'TRUE' : 'FALSE'
+            });
+
+            try {
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString()
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data && data.currentWord) renderGame(data);
+
+                if (!data || !data.ok) {
+                    setStatus((data && data.message) || '등록하지 못했습니다.', 'error');
+                    return;
+                }
+
+                elements.wordInput.value = '';
+                hintShownForWord = '';
+                elements.hintPanel.classList.add('hidden');
+                showAcceptedWords(data.acceptedWord, data.acceptedMeaning, data.relatedWords || []);
+                setStatus(`${data.acceptedWord} - ${data.acceptedMeaning}`, 'success');
+                elements.wordInput.focus();
+            } catch (error) {
+                setStatus('연결이 불안정합니다. 잠시 후 다시 등록해 주세요.', 'error');
+            } finally {
+                submitting = false;
+                elements.submitBtn.disabled = false;
+                elements.hintBtn.disabled = !(gameState && gameState.hints && gameState.hints.length);
+            }
+        }
+
+        function setStatus(message, type) {
+            elements.status.textContent = message || '';
+            elements.status.className = `status${type ? ` ${type}` : ''}`;
+        }
+
+        function showAcceptedWords(word, meaning, relatedWords) {
+            elements.acceptedWord.textContent = `${word} - ${meaning}`;
+            elements.relatedList.replaceChildren();
+            relatedWords.forEach(item => {
+                const listItem = document.createElement('li');
+                const term = document.createElement('strong');
+                const definition = document.createElement('span');
+                term.textContent = item.word || '';
+                definition.textContent = item.meaning || '';
+                listItem.append(term, definition);
+                elements.relatedList.appendChild(listItem);
+            });
+            elements.acceptedPanel.classList.toggle('hidden', !relatedWords.length);
+        }
+    </script>
+</body>
+</html>
