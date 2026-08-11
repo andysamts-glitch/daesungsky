@@ -70,6 +70,8 @@
         .grid-cell input.correct { background: var(--green-soft); color: var(--green); }
         .grid-cell input.wrong { background: var(--coral-soft); color: var(--coral); }
         .grid-cell input.hinted { background: var(--amber-soft); color: var(--amber); }
+        .grid-cell input.given { background: #e6f3ec; color: #176343; cursor: default; }
+        .grid-cell input.given:focus { background: #e6f3ec; box-shadow: inset 0 0 0 2px #78ae92; }
         .cell-number { position: absolute; z-index: 1; top: 2px; left: 3px; color: var(--muted); font-size: 8px; font-weight: 700; pointer-events: none; }
         .action-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 18px; }
         .check-btn { border: 0; background: var(--teal); color: #fff; padding: 10px 16px; }
@@ -294,6 +296,100 @@
             }
         ];
 
+        PUZZLES.push(
+            {
+                id: '4', title: '4번',
+                words: [
+                    { answer: 'travel', clue: 'To go from one place to another.', meaning: '여행하다' },
+                    { answer: 'market', clue: 'A place or system where things are bought and sold.', meaning: '시장, 시장 상황' },
+                    { answer: 'matter', clue: 'A subject or problem, or to be important.', meaning: '문제, 중요하다' },
+                    { answer: 'later', clue: 'At a time after the present or after another time.', meaning: '나중에' },
+                    { answer: 'alert', clue: 'Quick to notice things, or a warning of danger.', meaning: '주의 깊은, 경보' },
+                    { answer: 'treat', clue: 'To behave toward someone in a particular way.', meaning: '대하다, 치료하다' },
+                    { answer: 'meter', clue: 'A device that measures an amount of something.', meaning: '계량기, 미터' },
+                    { answer: 'term', clue: 'A word or expression used for a particular idea.', meaning: '용어, 기간' }
+                ]
+            },
+            {
+                id: '5', title: '5번',
+                words: [
+                    { answer: 'school', clue: 'A place where students learn.', meaning: '학교' },
+                    { answer: 'choice', clue: 'An act of choosing between two or more things.', meaning: '선택' },
+                    { answer: 'close', clue: 'Near in distance, time, or relationship.', meaning: '가까운, 닫다' },
+                    { answer: 'coach', clue: 'A person who trains a team or player.', meaning: '코치, 지도하다' },
+                    { answer: 'social', clue: 'Related to society or spending time with people.', meaning: '사회의, 사교적인' },
+                    { answer: 'local', clue: 'Connected with a particular area or neighborhood.', meaning: '지역의' },
+                    { answer: 'class', clue: 'A group of students learning together.', meaning: '학급, 수업' },
+                    { answer: 'scale', clue: 'The size or level of something.', meaning: '규모, 척도' }
+                ]
+            },
+            {
+                id: '6', title: '6번',
+                words: [
+                    { answer: 'public', clue: 'Connected with ordinary people in a community.', meaning: '대중의, 공공의' },
+                    { answer: 'policy', clue: 'A plan or set of rules for action.', meaning: '정책, 방침' },
+                    { answer: 'police', clue: 'The people whose job is to protect the public.', meaning: '경찰' },
+                    { answer: 'people', clue: 'Men, women, and children; human beings.', meaning: '사람들' },
+                    { answer: 'piece', clue: 'A part of something larger.', meaning: '조각, 부분' },
+                    { answer: 'place', clue: 'A particular position or area.', meaning: '장소, 놓다' },
+                    { answer: 'price', clue: 'The amount of money something costs.', meaning: '가격' },
+                    { answer: 'simple', clue: 'Easy to understand or do.', meaning: '간단한' }
+                ]
+            },
+            {
+                id: '7', title: '7번',
+                words: [
+                    { answer: 'record', clue: 'A written account or stored piece of information.', meaning: '기록, 기록하다' },
+                    { answer: 'report', clue: 'A spoken or written account of information.', meaning: '보고서, 보고하다' },
+                    { answer: 'order', clue: 'The way in which things are arranged.', meaning: '순서, 주문하다' },
+                    { answer: 'reader', clue: 'A person who reads.', meaning: '독자' },
+                    { answer: 'reduce', clue: 'To make something smaller in size or amount.', meaning: '줄이다' },
+                    { answer: 'decide', clue: 'To choose after thinking carefully.', meaning: '결정하다' },
+                    { answer: 'code', clue: 'A system of symbols or rules.', meaning: '암호, 규범' },
+                    { answer: 'core', clue: 'The central or most important part of something.', meaning: '핵심, 중심부' }
+                ]
+            },
+            {
+                id: '8', title: '8번',
+                words: [
+                    { answer: 'global', clue: 'Related to the whole world.', meaning: '세계적인, 전 세계의' },
+                    { answer: 'goal', clue: 'Something that you hope to achieve.', meaning: '목표' },
+                    { answer: 'legal', clue: 'Allowed by law.', meaning: '법률의, 합법적인' },
+                    { answer: 'large', clue: 'Big in size or amount.', meaning: '큰, 많은' },
+                    { answer: 'label', clue: 'A piece of paper giving information about something.', meaning: '표지, 라벨' },
+                    { answer: 'allow', clue: 'To let someone do something.', meaning: '허락하다' },
+                    { answer: 'agile', clue: 'Able to move quickly and easily.', meaning: '민첩한' },
+                    { answer: 'angle', clue: 'The space between two lines that meet.', meaning: '각도' }
+                ]
+            },
+            {
+                id: '9', title: '9번',
+                words: [
+                    { answer: 'result', clue: 'Something that happens because of an action.', meaning: '결과' },
+                    { answer: 'return', clue: 'To go or come back.', meaning: '돌아오다, 반환하다' },
+                    { answer: 'future', clue: 'The time that is still to come.', meaning: '미래' },
+                    { answer: 'culture', clue: 'The ideas and customs of a group of people.', meaning: '문화' },
+                    { answer: 'true', clue: 'Based on facts; not false.', meaning: '사실인, 참인' },
+                    { answer: 'rule', clue: 'An official instruction about what is allowed.', meaning: '규칙, 지배하다' },
+                    { answer: 'route', clue: 'A way from one place to another.', meaning: '경로, 노선' },
+                    { answer: 'user', clue: 'A person who uses a product or service.', meaning: '사용자' }
+                ]
+            },
+            {
+                id: '10', title: '10번',
+                words: [
+                    { answer: 'nature', clue: 'The physical world, including plants and animals.', meaning: '자연' },
+                    { answer: 'feature', clue: 'An important or noticeable part of something.', meaning: '특징' },
+                    { answer: 'future', clue: 'The time that is still to come.', meaning: '미래' },
+                    { answer: 'author', clue: 'A person who writes books or articles.', meaning: '작가, 저자' },
+                    { answer: 'earth', clue: 'The planet on which we live.', meaning: '지구' },
+                    { answer: 'heart', clue: 'The organ that moves blood around the body.', meaning: '심장, 중심' },
+                    { answer: 'teach', clue: 'To help someone learn something.', meaning: '가르치다' },
+                    { answer: 'reach', clue: 'To arrive at a place, level, or goal.', meaning: '도달하다' }
+                ]
+            }
+        );
+
         const elements = {
             menuView: document.getElementById('menu-view'),
             rankingView: document.getElementById('ranking-view'),
@@ -377,9 +473,13 @@
                 })).filter(choice => choice.candidates.length);
 
                 if (!choices.length) break;
-                choices.sort((a, b) => a.candidates.length - b.candidates.length);
+                choices.sort((a, b) => {
+                    const aIntersections = Math.max(...a.candidates.map(candidate => candidate.intersections));
+                    const bIntersections = Math.max(...b.candidates.map(candidate => candidate.intersections));
+                    return bIntersections - aIntersections || a.candidates.length - b.candidates.length;
+                });
                 const choice = choices[0];
-                choice.candidates.sort((a, b) => a.area - b.area || b.intersections - a.intersections);
+                choice.candidates.sort((a, b) => b.intersections - a.intersections || a.area - b.area);
                 addWord(choice.candidates[0]);
                 remaining.splice(choice.index, 1);
             }
@@ -516,6 +616,7 @@
         function renderPuzzle() {
             const { cells, placed, bounds } = activeLayout;
             const startNumbers = new Map(placed.map(word => [cellKey(word.x, word.y), word.number]));
+            const givenCellKeys = new Set(placed.map(word => cellKey(word.x, word.y)));
             elements.grid.replaceChildren();
             elements.completedList.replaceChildren();
             elements.completedWords.classList.add('hidden');
@@ -548,6 +649,12 @@
                     input.autocapitalize = 'characters';
                     input.spellcheck = false;
                     input.dataset.key = cellKey(x, y);
+                    if (givenCellKeys.has(input.dataset.key)) {
+                        input.value = cell.letter.toUpperCase();
+                        input.readOnly = true;
+                        input.dataset.given = 'true';
+                        input.classList.add('given');
+                    }
                     input.addEventListener('input', handleCellInput);
                     input.addEventListener('keydown', handleCellKeydown);
                     input.addEventListener('focus', () => selectWordAtCell(input.dataset.key));
@@ -852,7 +959,8 @@
 
         function resetPuzzle() {
             elements.grid.querySelectorAll('input').forEach(input => {
-                input.value = '';
+                const cell = activeLayout.cells.get(input.dataset.key);
+                input.value = input.dataset.given === 'true' ? cell.letter.toUpperCase() : '';
                 input.classList.remove('correct', 'wrong', 'hinted');
             });
             updateHintButton();
