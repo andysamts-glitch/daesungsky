@@ -21,6 +21,8 @@
             --coral: #b44949;
             --coral-soft: #fff1f1;
             --orange: #a65d10;
+            --amber: #a56416;
+            --amber-soft: #fff8e9;
         }
 
         * { box-sizing: border-box; }
@@ -60,22 +62,33 @@
         .back-btn { flex: 0 0 auto; border: 1px solid #c6d1dc; background: #fff; color: #526273; padding: 7px 10px; font-size: 13px; }
         .back-btn:hover { background: #f2f5f8; }
         .grid-scroll { overflow-x: auto; padding: 3px 1px 14px; }
-        .crossword-grid { --cell-size: 35px; display: grid; gap: 2px; width: max-content; margin: 0 auto; background: #26313d; border: 2px solid #26313d; }
-        .grid-cell { position: relative; width: var(--cell-size); height: var(--cell-size); background: #fff; }
-        .grid-cell.blank { background: #26313d; }
+        .crossword-grid { --cell-size: 35px; display: grid; gap: 0; width: max-content; margin: 0 auto; }
+        .grid-cell { position: relative; width: var(--cell-size); height: var(--cell-size); border: 1px solid #26313d; background: #fff; }
+        .grid-cell.blank { border-color: transparent; background: transparent; }
         .grid-cell input { width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; color: var(--ink); outline: none; padding: 8px 1px 0; text-align: center; text-transform: uppercase; font-size: 18px; font-weight: 800; }
         .grid-cell input:focus { background: #e5f2ff; box-shadow: inset 0 0 0 2px var(--blue); }
         .grid-cell input.correct { background: var(--green-soft); color: var(--green); }
         .grid-cell input.wrong { background: var(--coral-soft); color: var(--coral); }
+        .grid-cell input.hinted { background: var(--amber-soft); color: var(--amber); }
         .cell-number { position: absolute; z-index: 1; top: 2px; left: 3px; color: var(--muted); font-size: 8px; font-weight: 700; pointer-events: none; }
         .action-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 18px; }
         .check-btn { border: 0; background: var(--teal); color: #fff; padding: 10px 16px; }
         .check-btn:hover { background: var(--teal-dark); }
+        .hint-btn { border: 1px solid #e1bc7a; border-radius: 6px; background: #fff; color: var(--amber); padding: 9px 13px; font-weight: 700; }
+        .hint-btn:hover:not(:disabled) { background: var(--amber-soft); }
+        .hint-btn:disabled { cursor: default; opacity: .48; }
         .reset-btn { border: 1px solid #c6d1dc; background: #fff; color: #526273; padding: 9px 14px; }
         .reset-btn:hover { background: #f2f5f8; }
         .status { min-height: 20px; margin: 0 0 14px; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; }
         .status.success { color: var(--green); }
         .status.error { color: var(--coral); }
+        .completed-words { margin: 0 0 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+        .completed-words h3 { margin: 0 0 8px; color: var(--ink); font-size: 16px; }
+        .completed-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: 0; padding: 0; list-style: none; }
+        .completed-list li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: baseline; gap: 6px; min-width: 0; border-bottom: 1px solid #eaf0f4; padding: 8px 2px; color: var(--muted); font-size: 13px; }
+        .completed-number { color: var(--green); font-weight: 800; }
+        .completed-answer { color: var(--ink); font-weight: 800; }
+        .completed-meaning { overflow-wrap: anywhere; }
         .clues { border-top: 1px solid var(--line); padding-top: 18px; }
         .clues h3 { margin: 0 0 10px; color: var(--ink); font-size: 16px; }
         .clue-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
@@ -110,6 +123,7 @@
             .crossword-grid { --cell-size: 30px; }
             .grid-cell input { padding-top: 7px; font-size: 16px; }
             .clue-groups { grid-template-columns: 1fr; gap: 16px; }
+            .completed-list { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -168,9 +182,15 @@
 
                 <div class="action-row">
                     <button id="check-btn" class="check-btn" type="button">정답 확인</button>
+                    <button id="hint-btn" class="hint-btn" type="button">힌트 3회</button>
                     <button id="reset-btn" class="reset-btn" type="button">다시 풀기</button>
                 </div>
                 <p id="status" class="status" role="status"></p>
+
+                <section id="completed-words" class="completed-words hidden" aria-live="polite">
+                    <h3>맞힌 단어</h3>
+                    <ul id="completed-list" class="completed-list"></ul>
+                </section>
 
                 <section class="clues" aria-label="영어 단어 설명">
                     <h3>English Clues</h3>
@@ -197,41 +217,84 @@
                 id: '1',
                 title: '1번',
                 words: [
-                    { answer: 'applicant', clue: 'A person who asks to be considered for a job or position.' },
-                    { answer: 'candidate', clue: 'A person being considered for a job, position, or election.' },
-                    { answer: 'confidence', clue: 'Belief in your own abilities or in someone else.' },
-                    { answer: 'gentle', clue: 'Kind, calm, and not rough.' },
-                    { answer: 'jurisdiction', clue: 'The legal authority to make decisions.' },
-                    { answer: 'invaluable', clue: 'Extremely useful or important.' },
-                    { answer: 'eligible', clue: 'Qualified to be chosen or allowed to do something.' }
+                    { answer: 'cargo', clue: 'Goods carried by a ship, plane, or truck.', meaning: '뱃짐, 화물' },
+                    { answer: 'gentle', clue: 'Kind, calm, and not rough.', meaning: '온화한, 친절한' },
+                    { answer: 'style', clue: 'A particular way of doing or presenting something.', meaning: '양식, 스타일, 이름 짓다' },
+                    { answer: 'broad', clue: 'Wide in size, range, or meaning.', meaning: '폭넓은' },
+                    { answer: 'match', clue: 'To be suitable for or go well with something.', meaning: '어울리다, 조화되다, 경기' },
+                    { answer: 'wage', clue: 'Money paid to a worker for work done.', meaning: '임금, 급료' },
+                    { answer: 'access', clue: 'The right or opportunity to use or enter something.', meaning: '이용 권한, 접근, 통로' },
+                    { answer: 'degree', clue: 'An academic qualification from a college or university.', meaning: '학위' },
+                    { answer: 'form', clue: 'A type, shape, or way that something appears.', meaning: '유형, 양식' },
+                    { answer: 'code', clue: 'A set of rules or a system of symbols.', meaning: '규범, 관례, 암호' }
+                ],
+                layout: [
+                    { answer: 'broad', direction: 'across', x: 0, y: 0 },
+                    { answer: 'match', direction: 'down', x: 3, y: -1 },
+                    { answer: 'form', direction: 'down', x: 1, y: -2 },
+                    { answer: 'cargo', direction: 'across', x: 3, y: 2 },
+                    { answer: 'gentle', direction: 'down', x: 6, y: 2 },
+                    { answer: 'code', direction: 'across', x: 3, y: 7 },
+                    { answer: 'style', direction: 'across', x: 5, y: 5 },
+                    { answer: 'wage', direction: 'down', x: 9, y: 2 },
+                    { answer: 'degree', direction: 'down', x: 5, y: 7 },
+                    { answer: 'access', direction: 'across', x: 9, y: 3 }
                 ]
             },
             {
                 id: '2',
                 title: '2번',
                 words: [
-                    { answer: 'aggravate', clue: 'To make a problem or bad situation worse.' },
-                    { answer: 'associate', clue: 'To connect one person or thing with another.' },
-                    { answer: 'meticulous', clue: 'Very careful and precise about details.' },
-                    { answer: 'consultant', clue: 'A person who gives expert advice about a subject.' },
-                    { answer: 'culminate', clue: 'To reach the highest point or final result.' },
-                    { answer: 'occupation', clue: 'A job or profession.' },
-                    { answer: 'requirement', clue: 'Something that must be done or needed.' },
-                    { answer: 'unadorned', clue: 'Plain and without decoration.' },
+                    { answer: 'scarce', clue: 'Rare or not available in large amounts.', meaning: '드문, 진기한' },
+                    { answer: 'stroke', clue: 'A hit or a movement of the hand.', meaning: '일격, 타격, 쓰다듬다' },
+                    { answer: 'jest', clue: 'A joke or something said for fun.', meaning: '농담, 익살, 조롱하다' },
+                    { answer: 'flush', clue: 'To clean something by making water flow through it.', meaning: '물로 씻어 내리다' },
+                    { answer: 'toil', clue: 'To work very hard for a long time.', meaning: '수고하다, 일하다, 고생하다' },
+                    { answer: 'policy', clue: 'A plan or set of rules used by an organization.', meaning: '규정, 보험 증권' },
+                    { answer: 'fraud', clue: 'The crime of tricking people for money or gain.', meaning: '사기' },
+                    { answer: 'habit', clue: 'Something that you do often and almost without thinking.', meaning: '버릇, 습관' },
+                    { answer: 'comply', clue: 'To obey a rule, request, or order.', meaning: '따르다, 준수하다' },
+                    { answer: 'effect', clue: 'A result or change caused by something.', meaning: '효과, 영향, 효력' }
+                ],
+                layout: [
+                    { answer: 'jest', direction: 'across', x: 0, y: 0 },
+                    { answer: 'flush', direction: 'down', x: 2, y: -3 },
+                    { answer: 'comply', direction: 'across', x: -2, y: -2 },
+                    { answer: 'policy', direction: 'down', x: -2, y: -6 },
+                    { answer: 'toil', direction: 'across', x: -5, y: -4 },
+                    { answer: 'effect', direction: 'down', x: -5, y: -9 },
+                    { answer: 'fraud', direction: 'across', x: -5, y: -8 },
+                    { answer: 'stroke', direction: 'across', x: -10, y: -9 },
+                    { answer: 'habit', direction: 'down', x: -9, y: -13 },
+                    { answer: 'scarce', direction: 'down', x: -10, y: -9 }
                 ]
             },
             {
                 id: '3',
                 title: '3번',
                 words: [
-                    { answer: 'residue', clue: 'A small amount left after the main part is gone.' },
-                    { answer: 'extensive', clue: 'Large in amount, range, or area.' },
-                    { answer: 'professional', clue: 'Related to a job that needs special training.' },
-                    { answer: 'proficiency', clue: 'A high level of skill or ability.' },
-                    { answer: 'accelerate', clue: 'To make something happen faster.' },
-                    { answer: 'ingenuous', clue: 'Innocent and trusting; not trying to deceive others.' },
-                    { answer: 'reference', clue: 'A statement that gives information about a person.' },
-                    { answer: 'apprehensive', clue: 'Worried or nervous about something that may happen.' }
+                    { answer: 'residue', clue: 'A small amount left after the main part is gone.', meaning: '나머지, 잔여' },
+                    { answer: 'habitat', clue: 'The natural home of an animal or plant.', meaning: '서식지, 거주지' },
+                    { answer: 'amend', clue: 'To make a small change in order to improve something.', meaning: '고치다, 수정하다' },
+                    { answer: 'hoist', clue: 'To raise something using ropes or equipment.', meaning: '올리다' },
+                    { answer: 'sincere', clue: 'Honest and showing real feelings.', meaning: '성실한, 거짓없는' },
+                    { answer: 'manage', clue: 'To control or be responsible for something.', meaning: '경영하다, 그럭저럭 해내다' },
+                    { answer: 'remind', clue: 'To help someone remember something.', meaning: '상기시키다, 일깨우다' },
+                    { answer: 'submit', clue: 'To give something to a person in authority.', meaning: '제출하다' },
+                    { answer: 'assist', clue: 'To help someone do something.', meaning: '돕다, 조력하다' },
+                    { answer: 'engage', clue: 'To take part in an activity or become involved.', meaning: '관여하다, 종사하다' }
+                ],
+                layout: [
+                    { answer: 'amend', direction: 'across', x: 0, y: 0 },
+                    { answer: 'habitat', direction: 'down', x: 0, y: -5 },
+                    { answer: 'manage', direction: 'down', x: 3, y: -2 },
+                    { answer: 'remind', direction: 'across', x: 2, y: 3 },
+                    { answer: 'sincere', direction: 'down', x: 5, y: 2 },
+                    { answer: 'hoist', direction: 'across', x: -4, y: 1 },
+                    { answer: 'submit', direction: 'across', x: -4, y: -2 },
+                    { answer: 'engage', direction: 'across', x: 5, y: 8 },
+                    { answer: 'residue', direction: 'across', x: -1, y: 6 },
+                    { answer: 'assist', direction: 'down', x: -4, y: -6 }
                 ]
             }
         ];
@@ -255,9 +318,12 @@
             downList: document.getElementById('down-list'),
             status: document.getElementById('status'),
             checkBtn: document.getElementById('check-btn'),
+            hintBtn: document.getElementById('hint-btn'),
             resetBtn: document.getElementById('reset-btn'),
             backBtn: document.getElementById('back-btn'),
-            rankingList: document.getElementById('ranking-list')
+            rankingList: document.getElementById('ranking-list'),
+            completedWords: document.getElementById('completed-words'),
+            completedList: document.getElementById('completed-list')
         };
 
         let activePuzzle = null;
@@ -267,6 +333,7 @@
         let timerId = null;
         let completed = false;
         let rankingPuzzleId = '1';
+        let hintsRemaining = 3;
 
         function cellKey(x, y) {
             return `${x},${y}`;
@@ -279,7 +346,7 @@
             };
         }
 
-        function buildLayout(sourceWords) {
+        function buildLayout(sourceWords, fixedLayout = null) {
             const cells = new Map();
             const placed = [];
             const addWord = placement => {
@@ -290,6 +357,16 @@
                     if (!cells.has(key)) cells.set(key, { letter, x: point.x, y: point.y });
                 });
             };
+
+            if (fixedLayout) {
+                const wordsByAnswer = new Map(sourceWords.map(word => [word.answer, word]));
+                fixedLayout.forEach(placement => {
+                    const word = wordsByAnswer.get(placement.answer);
+                    if (!word) return;
+                    addWord({ ...word, ...placement });
+                });
+                return finalizeLayout(cells, placed);
+            }
 
             addWord({ ...sourceWords[0], direction: 'across', x: 0, y: 0 });
             const remaining = sourceWords.slice(1).map(word => ({ ...word }));
@@ -309,6 +386,10 @@
                 remaining.splice(choice.index, 1);
             }
 
+            return finalizeLayout(cells, placed);
+        }
+
+        function finalizeLayout(cells, placed) {
             const bounds = getBounds(cells);
             const starts = new Map();
             [...placed].sort((a, b) => a.y - b.y || a.x - b.x).forEach(word => {
@@ -418,13 +499,15 @@
             localStorage.setItem('crosswordPlayerName', playerName);
             activePuzzle = PUZZLES.find(puzzle => puzzle.id === id);
             if (!activePuzzle) return;
-            activeLayout = buildLayout(activePuzzle.words);
+            activeLayout = buildLayout(activePuzzle.words, activePuzzle.layout);
             completed = false;
+            hintsRemaining = 3;
             elements.menuView.classList.add('hidden');
             elements.puzzleView.classList.remove('hidden');
             elements.puzzleHeading.textContent = activePuzzle.title;
             setStatus('');
             renderPuzzle();
+            updateHintButton();
             startTimer();
             history.replaceState(null, '', `crossword.html?game=${encodeURIComponent(id)}`);
         }
@@ -433,6 +516,8 @@
             const { cells, placed, bounds } = activeLayout;
             const startNumbers = new Map(placed.map(word => [cellKey(word.x, word.y), word.number]));
             elements.grid.replaceChildren();
+            elements.completedList.replaceChildren();
+            elements.completedWords.classList.add('hidden');
             elements.grid.style.gridTemplateColumns = `repeat(${bounds.maxX - bounds.minX + 1}, var(--cell-size))`;
 
             for (let y = bounds.minY; y <= bounds.maxY; y++) {
@@ -478,9 +563,12 @@
                 placed.filter(word => word.direction === direction).sort((a, b) => a.number - b.number).forEach(word => {
                     const item = document.createElement('li');
                     const button = document.createElement('button');
+                    const number = document.createElement('span');
                     button.className = 'clue-btn';
                     button.type = 'button';
-                    button.innerHTML = `<span class="clue-num">${word.number}.</span> ${word.clue}`;
+                    number.className = 'clue-num';
+                    number.textContent = `${word.number}.`;
+                    button.append(number, document.createTextNode(` ${word.clue}`));
                     button.addEventListener('click', () => focusWord(word));
                     item.appendChild(button);
                     list.appendChild(item);
@@ -497,8 +585,9 @@
         function handleCellInput(event) {
             const input = event.currentTarget;
             input.value = input.value.replace(/[^a-z]/gi, '').slice(-1).toUpperCase();
-            input.classList.remove('correct', 'wrong');
+            input.classList.remove('correct', 'wrong', 'hinted');
             updateProgress();
+            updateCompletedWords();
             if (!input.value) return;
             const inputs = [...elements.grid.querySelectorAll('input')];
             const next = inputs[inputs.indexOf(input) + 1];
@@ -516,6 +605,63 @@
             const inputs = [...elements.grid.querySelectorAll('input')];
             const filled = inputs.filter(input => input.value).length;
             elements.puzzleProgress.textContent = `${filled} / ${inputs.length}`;
+        }
+
+        function isWordComplete(word) {
+            return [...word.answer].every((letter, index) => {
+                const point = wordCoordinate(word, index);
+                const input = elements.grid.querySelector(`input[data-key="${cellKey(point.x, point.y)}"]`);
+                return input && input.value === letter.toUpperCase();
+            });
+        }
+
+        function updateCompletedWords() {
+            if (!activeLayout) return;
+            const completedWords = activeLayout.placed
+                .filter(isWordComplete)
+                .sort((a, b) => a.number - b.number || a.direction.localeCompare(b.direction));
+
+            elements.completedList.replaceChildren();
+            elements.completedWords.classList.toggle('hidden', completedWords.length === 0);
+            completedWords.forEach(word => {
+                const item = document.createElement('li');
+                const number = document.createElement('span');
+                const answer = document.createElement('span');
+                const meaning = document.createElement('span');
+                number.className = 'completed-number';
+                answer.className = 'completed-answer';
+                meaning.className = 'completed-meaning';
+                number.textContent = `${word.number}.`;
+                answer.textContent = word.answer;
+                meaning.textContent = word.meaning;
+                item.append(number, answer, meaning);
+                elements.completedList.appendChild(item);
+            });
+        }
+
+        function updateHintButton() {
+            elements.hintBtn.textContent = `힌트 ${hintsRemaining}회`;
+            elements.hintBtn.disabled = completed || hintsRemaining === 0;
+        }
+
+        function useHint() {
+            if (completed || hintsRemaining === 0) return;
+            const emptyInputs = [...elements.grid.querySelectorAll('input')].filter(input => !input.value);
+            if (!emptyInputs.length) {
+                setStatus('모든 칸을 채웠습니다. 정답을 확인해 주세요.');
+                return;
+            }
+            const input = emptyInputs[Math.floor(Math.random() * emptyInputs.length)];
+            const expected = activeLayout.cells.get(input.dataset.key).letter.toUpperCase();
+            input.value = expected;
+            input.classList.remove('correct', 'wrong');
+            input.classList.add('hinted');
+            hintsRemaining--;
+            updateProgress();
+            updateCompletedWords();
+            updateHintButton();
+            setStatus(`힌트를 사용했습니다. ${hintsRemaining}회 남았습니다.`);
+            input.focus();
         }
 
         function startTimer() {
@@ -562,6 +708,7 @@
                 setStatus(`${wrong}칸을 다시 확인해 주세요.`, 'error');
                 return;
             }
+            updateCompletedWords();
             finishPuzzle();
         }
 
@@ -571,6 +718,11 @@
             stopTimer();
             const elapsedSeconds = Math.max(1, Math.ceil((Date.now() - startedAt) / 1000));
             elements.timer.textContent = formatTime(elapsedSeconds);
+            updateHintButton();
+            if (hintsRemaining < 3) {
+                setStatus(`정답입니다. 힌트를 사용했으므로 순위에는 기록하지 않습니다.`, 'success');
+                return;
+            }
             setStatus(`정답입니다. ${elapsedSeconds}초 기록을 저장 중입니다.`, 'success');
 
             try {
@@ -661,9 +813,12 @@
         function resetPuzzle() {
             elements.grid.querySelectorAll('input').forEach(input => {
                 input.value = '';
-                input.classList.remove('correct', 'wrong');
+                input.classList.remove('correct', 'wrong', 'hinted');
             });
+            hintsRemaining = 3;
+            updateHintButton();
             updateProgress();
+            updateCompletedWords();
             setStatus('');
             const first = elements.grid.querySelector('input');
             if (first) first.focus();
@@ -675,6 +830,7 @@
         }
 
         elements.checkBtn.addEventListener('click', checkAnswers);
+        elements.hintBtn.addEventListener('click', useHint);
         elements.resetBtn.addEventListener('click', resetPuzzle);
         elements.backBtn.addEventListener('click', () => {
             stopTimer();
