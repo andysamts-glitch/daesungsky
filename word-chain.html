@@ -68,6 +68,16 @@
         .stat:nth-child(2) { border-left-color: var(--green); background: var(--green-soft); }
         .stat span { display: block; color: var(--muted); font-size: 12px; }
         .stat strong { display: block; margin-top: 3px; color: var(--ink); font-size: 19px; }
+        .leaderboard { padding: 16px 0 2px; border-bottom: 1px solid var(--line); }
+        .leaderboard-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+        .leaderboard-header h2 { margin: 0; color: var(--ink); font-size: 16px; }
+        .leaderboard-header span { color: var(--muted); font-size: 12px; }
+        .leaderboard-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid #eaf0f4; }
+        .leaderboard-list li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 39px; padding: 7px 2px; border-bottom: 1px solid #eaf0f4; }
+        .leaderboard-rank { color: var(--teal-dark); font-size: 13px; font-weight: 800; }
+        .leaderboard-name { min-width: 0; color: var(--ink); font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+        .leaderboard-count { color: var(--muted); font-size: 13px; }
+        .empty-leaderboard { display: block !important; padding: 15px 0 !important; color: var(--muted); font-size: 13px; text-align: center; }
         .entry-panel { padding: 18px 0 14px; }
         .entry-label { display: block; margin-bottom: 8px; color: var(--ink); font-size: 14px; font-weight: 700; }
         .word-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
@@ -154,6 +164,13 @@
                 <div class="stat"><span>내가 낸 단어</span><strong id="my-count">0</strong></div>
             </section>
 
+            <section class="leaderboard" aria-label="이번 주 참여 순위">
+                <div class="leaderboard-header">
+                    <h2>이번 주 참여 순위</h2>
+                    <span>TOP 5</span>
+                </div>
+                <ol id="leaderboard-list" class="leaderboard-list"></ol>
+            </section>
             <section class="entry-panel" aria-label="단어 입력">
                 <label id="entry-label" class="entry-label" for="word-input">영어 단어 입력</label>
                 <div class="word-entry">
@@ -210,6 +227,7 @@
             requiredLetter: document.getElementById('required-letter'),
             totalCount: document.getElementById('total-count'),
             myCount: document.getElementById('my-count'),
+            leaderboardList: document.getElementById('leaderboard-list'),
             entryLabel: document.getElementById('entry-label'),
             wordInput: document.getElementById('word-input'),
             submitBtn: document.getElementById('submit-btn'),
@@ -310,9 +328,36 @@
             elements.entryLabel.textContent = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 4글자 이상 영어 단어`;
             elements.wordInput.placeholder = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 4글자 이상 단어`;
             elements.hintBtn.disabled = !(data.hints && data.hints.length);
+            renderLeaderboard(data.weeklyLeaderboard || []);
             renderHistory(data.recentEntries || []);
         }
 
+        function renderLeaderboard(entries) {
+            elements.leaderboardList.replaceChildren();
+
+            if (!entries.length) {
+                const empty = document.createElement('li');
+                empty.className = 'empty-leaderboard';
+                empty.textContent = '이번 주 첫 참여자가 되어 보세요.';
+                elements.leaderboardList.appendChild(empty);
+                return;
+            }
+
+            entries.forEach(entry => {
+                const item = document.createElement('li');
+                const rank = document.createElement('span');
+                const player = document.createElement('span');
+                const count = document.createElement('span');
+                rank.className = 'leaderboard-rank';
+                player.className = 'leaderboard-name';
+                count.className = 'leaderboard-count';
+                rank.textContent = `${entry.rank || ''}위`;
+                player.textContent = entry.playerName || '**';
+                count.textContent = `${entry.count || 0}개`;
+                item.append(rank, player, count);
+                elements.leaderboardList.appendChild(item);
+            });
+        }
         function renderHistory(entries) {
             elements.historyList.replaceChildren();
 
