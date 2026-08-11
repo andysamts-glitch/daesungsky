@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>크로스퍼즐 | 대성 SKY</title>
+    <style>
+        :root {
+            --ink: #26313d;
+            --muted: #647181;
+            --line: #dbe2e8;
+            --page: #f4f6f8;
+            --teal: #197c79;
+            --teal-dark: #126460;
+            --blue: #2d6fb7;
+            --blue-soft: #edf5ff;
+            --green: #247253;
+            --green-soft: #eef8f2;
+            --coral: #b44949;
+            --coral-soft: #fff1f1;
+            --orange: #a65d10;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background: var(--page); color: var(--ink); font-family: "Malgun Gothic", Arial, sans-serif; }
+        button, input { font: inherit; }
+        button { cursor: pointer; }
+        .page { width: min(860px, calc(100% - 32px)); min-height: calc(100vh - 48px); margin: 24px auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+        .brand h1 { margin: 0; color: var(--teal-dark); font-size: 23px; letter-spacing: 0; }
+        .brand p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .home-btn, .back-btn, .check-btn, .reset-btn, .puzzle-btn { border-radius: 6px; font-weight: 700; }
+        .home-btn { flex: 0 0 auto; border: 1px solid #d7a45d; background: #fff; color: var(--orange); padding: 7px 10px; font-size: 13px; }
+        .home-btn:hover { background: #fff5e7; }
+        main { padding: 28px 22px 34px; }
+        h2 { margin: 0; color: var(--ink); font-size: 21px; }
+        .hidden { display: none !important; }
+        .name-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; max-width: 360px; margin-top: 16px; }
+        .name-entry label { color: var(--ink); font-size: 14px; font-weight: 700; }
+        .name-entry input { width: 100%; border: 1px solid #bcc8d3; border-radius: 6px; color: var(--ink); padding: 11px 12px; font-size: 16px; outline: none; }
+        .name-entry input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(45, 111, 183, 0.13); }
+        .menu-status { min-height: 20px; margin: 8px 0 0; color: var(--coral); font-size: 13px; font-weight: 700; }
+
+        .puzzle-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+        .puzzle-btn { min-height: 82px; border: 1px solid #b9d2e9; background: var(--blue-soft); color: var(--ink); padding: 16px; text-align: center; }
+        .puzzle-btn:hover { border-color: var(--blue); background: #e2f0ff; }
+        .puzzle-number { display: block; color: var(--blue); font-size: 23px; font-weight: 800; }
+        .puzzle-title { display: block; margin-top: 11px; font-size: 15px; }
+        .puzzle-count { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+        .ranking-menu-btn { display: block; width: 100%; margin-top: 14px; border: 1px solid #b8d9c6; border-radius: 6px; background: var(--green-soft); color: var(--green); padding: 11px 14px; font-weight: 700; }
+        .ranking-menu-btn:hover { background: #e1f2e8; }
+
+        .puzzle-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+        .puzzle-title-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+        .puzzle-title-row h2 { overflow-wrap: anywhere; }
+        .puzzle-meta { display: flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+        .timer { color: var(--teal-dark); font-size: 17px; font-weight: 800; }
+        .back-btn { flex: 0 0 auto; border: 1px solid #c6d1dc; background: #fff; color: #526273; padding: 7px 10px; font-size: 13px; }
+        .back-btn:hover { background: #f2f5f8; }
+        .grid-scroll { overflow-x: auto; padding: 3px 1px 14px; }
+        .crossword-grid { --cell-size: 35px; display: grid; gap: 2px; width: max-content; margin: 0 auto; background: #26313d; border: 2px solid #26313d; }
+        .grid-cell { position: relative; width: var(--cell-size); height: var(--cell-size); background: #fff; }
+        .grid-cell.blank { background: #26313d; }
+        .grid-cell input { width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; color: var(--ink); outline: none; padding: 8px 1px 0; text-align: center; text-transform: uppercase; font-size: 18px; font-weight: 800; }
+        .grid-cell input:focus { background: #e5f2ff; box-shadow: inset 0 0 0 2px var(--blue); }
+        .grid-cell input.correct { background: var(--green-soft); color: var(--green); }
+        .grid-cell input.wrong { background: var(--coral-soft); color: var(--coral); }
+        .cell-number { position: absolute; z-index: 1; top: 2px; left: 3px; color: var(--muted); font-size: 8px; font-weight: 700; pointer-events: none; }
+        .action-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 18px; }
+        .check-btn { border: 0; background: var(--teal); color: #fff; padding: 10px 16px; }
+        .check-btn:hover { background: var(--teal-dark); }
+        .reset-btn { border: 1px solid #c6d1dc; background: #fff; color: #526273; padding: 9px 14px; }
+        .reset-btn:hover { background: #f2f5f8; }
+        .status { min-height: 20px; margin: 0 0 14px; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; }
+        .status.success { color: var(--green); }
+        .status.error { color: var(--coral); }
+        .clues { border-top: 1px solid var(--line); padding-top: 18px; }
+        .clues h3 { margin: 0 0 10px; color: var(--ink); font-size: 16px; }
+        .clue-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+        .clue-group h4 { margin: 0 0 8px; color: var(--teal-dark); font-size: 14px; }
+        .clue-list { margin: 0; padding: 0; list-style: none; }
+        .clue-list li { border-bottom: 1px solid #eaf0f4; }
+        .clue-btn { width: 100%; border: 0; background: transparent; color: var(--ink); padding: 10px 3px; text-align: left; line-height: 1.45; font-size: 13px; }
+        .clue-btn:hover { background: #f7fbff; }
+        .clue-num { color: var(--blue); font-weight: 800; }
+        .ranking { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px; }
+        .ranking-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+        .ranking-header h3 { margin: 0; color: var(--ink); font-size: 16px; }
+        .ranking-header span { color: var(--muted); font-size: 12px; }
+        .ranking-list { margin: 10px 0 0; padding: 0; list-style: none; border-top: 1px solid #eaf0f4; }
+        .ranking-list li { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 39px; padding: 7px 2px; border-bottom: 1px solid #eaf0f4; }
+        .ranking-rank { color: var(--teal-dark); font-size: 13px; font-weight: 800; }
+        .ranking-name { color: var(--ink); font-size: 14px; font-weight: 700; }
+        .ranking-time { color: var(--muted); font-size: 13px; }
+        .ranking-empty { display: block !important; padding: 15px 0 !important; color: var(--muted); font-size: 13px; text-align: center; }
+        .ranking-view-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .ranking-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+        .ranking-tab { border: 1px solid #c6d1dc; border-radius: 6px; background: #fff; color: #526273; padding: 9px 10px; font-weight: 700; }
+        .ranking-tab:hover, .ranking-tab.active { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+        .ranking-view .ranking { margin-top: 16px; }
+
+        @media (max-width: 560px) {
+            .page { width: 100%; min-height: 100vh; margin: 0; border: 0; border-radius: 0; }
+            .topbar { padding: 14px 16px; }
+            main { padding: 24px 16px; }
+            .puzzle-list { grid-template-columns: 1fr; }
+            .puzzle-btn { min-height: 76px; }
+            .crossword-grid { --cell-size: 30px; }
+            .grid-cell input { padding-top: 7px; font-size: 16px; }
+            .clue-groups { grid-template-columns: 1fr; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div class="brand">
+                <h1>CROSSWORD</h1>
+                <p>대성 SKY Test Center</p>
+            </div>
+            <button class="home-btn" type="button" onclick="location.href='index.html'">홈으로</button>
+        </header>
+
+        <main>
+            <section id="menu-view">
+                <h2>크로스퍼즐</h2>
+                <div class="name-entry">
+                    <label for="student-name">이름</label>
+                    <input id="student-name" type="text" maxlength="20" autocomplete="name" placeholder="이름을 입력하세요">
+                </div>
+                <p id="menu-status" class="menu-status" role="status"></p>
+                <div id="puzzle-list" class="puzzle-list"></div>
+                <button id="show-rankings-btn" class="ranking-menu-btn" type="button">순위 보기</button>
+            </section>
+
+            <section id="ranking-view" class="hidden" aria-live="polite">
+                <div class="ranking-view-top">
+                    <h2>빠른 기록</h2>
+                    <button id="ranking-back-btn" class="back-btn" type="button">목록</button>
+                </div>
+                <div id="ranking-tabs" class="ranking-tabs"></div>
+                <section class="ranking" aria-label="빠른 기록 순위">
+                    <div class="ranking-header">
+                        <h3 id="ranking-heading">1번 빠른 기록 TOP 10</h3>
+                        <span>이니셜 표시</span>
+                    </div>
+                    <ol id="ranking-list" class="ranking-list"></ol>
+                </section>
+            </section>
+
+            <section id="puzzle-view" class="hidden" aria-live="polite">
+                <div class="puzzle-top">
+                    <div class="puzzle-title-row">
+                        <h2 id="puzzle-heading"></h2>
+                        <div class="puzzle-meta">
+                            <span id="timer" class="timer">00:00</span>
+                            <span id="puzzle-progress"></span>
+                        </div>
+                    </div>
+                    <button id="back-btn" class="back-btn" type="button">목록</button>
+                </div>
+
+                <div class="grid-scroll">
+                    <div id="crossword-grid" class="crossword-grid" aria-label="크로스퍼즐 입력판"></div>
+                </div>
+
+                <div class="action-row">
+                    <button id="check-btn" class="check-btn" type="button">정답 확인</button>
+                    <button id="reset-btn" class="reset-btn" type="button">다시 풀기</button>
+                </div>
+                <p id="status" class="status" role="status"></p>
+
+                <section class="clues" aria-label="영어 단어 설명">
+                    <h3>English Clues</h3>
+                    <div class="clue-groups">
+                        <div>
+                            <h4>Across</h4>
+                            <ul id="across-list" class="clue-list"></ul>
+                        </div>
+                        <div>
+                            <h4>Down</h4>
+                            <ul id="down-list" class="clue-list"></ul>
+                        </div>
+                    </div>
+                </section>
+
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
+        const PUZZLES = [
+            {
+                id: '1',
+                title: '1번',
+                words: [
+                    { answer: 'applicant', clue: 'A person who asks to be considered for a job or position.' },
+                    { answer: 'candidate', clue: 'A person being considered for a job, position, or election.' },
+                    { answer: 'confidence', clue: 'Belief in your own abilities or in someone else.' },
+                    { answer: 'gentle', clue: 'Kind, calm, and not rough.' },
+                    { answer: 'jurisdiction', clue: 'The legal authority to make decisions.' },
+                    { answer: 'invaluable', clue: 'Extremely useful or important.' },
+                    { answer: 'eligible', clue: 'Qualified to be chosen or allowed to do something.' }
+                ]
+            },
+            {
+                id: '2',
+                title: '2번',
+                words: [
+                    { answer: 'aggravate', clue: 'To make a problem or bad situation worse.' },
+                    { answer: 'associate', clue: 'To connect one person or thing with another.' },
+                    { answer: 'meticulous', clue: 'Very careful and precise about details.' },
+                    { answer: 'consultant', clue: 'A person who gives expert advice about a subject.' },
+                    { answer: 'culminate', clue: 'To reach the highest point or final result.' },
+                    { answer: 'occupation', clue: 'A job or profession.' },
+                    { answer: 'requirement', clue: 'Something that must be done or needed.' },
+                    { answer: 'unadorned', clue: 'Plain and without decoration.' },
+                ]
+            },
+            {
+                id: '3',
+                title: '3번',
+                words: [
+                    { answer: 'residue', clue: 'A small amount left after the main part is gone.' },
+                    { answer: 'extensive', clue: 'Large in amount, range, or area.' },
+                    { answer: 'professional', clue: 'Related to a job that needs special training.' },
+                    { answer: 'proficiency', clue: 'A high level of skill or ability.' },
+                    { answer: 'accelerate', clue: 'To make something happen faster.' },
+                    { answer: 'ingenuous', clue: 'Innocent and trusting; not trying to deceive others.' },
+                    { answer: 'reference', clue: 'A statement that gives information about a person.' },
+                    { answer: 'apprehensive', clue: 'Worried or nervous about something that may happen.' }
+                ]
+            }
+        ];
+
+        const elements = {
+            menuView: document.getElementById('menu-view'),
+            rankingView: document.getElementById('ranking-view'),
+            puzzleView: document.getElementById('puzzle-view'),
+            puzzleList: document.getElementById('puzzle-list'),
+            showRankingsBtn: document.getElementById('show-rankings-btn'),
+            rankingBackBtn: document.getElementById('ranking-back-btn'),
+            rankingTabs: document.getElementById('ranking-tabs'),
+            rankingHeading: document.getElementById('ranking-heading'),
+            studentName: document.getElementById('student-name'),
+            menuStatus: document.getElementById('menu-status'),
+            puzzleHeading: document.getElementById('puzzle-heading'),
+            puzzleProgress: document.getElementById('puzzle-progress'),
+            timer: document.getElementById('timer'),
+            grid: document.getElementById('crossword-grid'),
+            acrossList: document.getElementById('across-list'),
+            downList: document.getElementById('down-list'),
+            status: document.getElementById('status'),
+            checkBtn: document.getElementById('check-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            backBtn: document.getElementById('back-btn'),
+            rankingList: document.getElementById('ranking-list')
+        };
+
+        let activePuzzle = null;
+        let activeLayout = null;
+        let playerName = localStorage.getItem('crosswordPlayerName') || '';
+        let startedAt = 0;
+        let timerId = null;
+        let completed = false;
+        let rankingPuzzleId = '1';
+
+        function cellKey(x, y) {
+            return `${x},${y}`;
+        }
+
+        function wordCoordinate(word, index) {
+            return {
+                x: word.x + (word.direction === 'across' ? index : 0),
+                y: word.y + (word.direction === 'down' ? index : 0)
+            };
+        }
+
+        function buildLayout(sourceWords) {
+            const cells = new Map();
+            const placed = [];
+            const addWord = placement => {
+                placed.push(placement);
+                [...placement.answer].forEach((letter, index) => {
+                    const point = wordCoordinate(placement, index);
+                    const key = cellKey(point.x, point.y);
+                    if (!cells.has(key)) cells.set(key, { letter, x: point.x, y: point.y });
+                });
+            };
+
+            addWord({ ...sourceWords[0], direction: 'across', x: 0, y: 0 });
+            const remaining = sourceWords.slice(1).map(word => ({ ...word }));
+
+            while (remaining.length) {
+                const choices = remaining.map((word, index) => ({
+                    index,
+                    word,
+                    candidates: getCandidates(word, placed, cells)
+                })).filter(choice => choice.candidates.length);
+
+                if (!choices.length) break;
+                choices.sort((a, b) => a.candidates.length - b.candidates.length);
+                const choice = choices[0];
+                choice.candidates.sort((a, b) => a.area - b.area || b.intersections - a.intersections);
+                addWord(choice.candidates[0]);
+                remaining.splice(choice.index, 1);
+            }
+
+            const bounds = getBounds(cells);
+            const starts = new Map();
+            [...placed].sort((a, b) => a.y - b.y || a.x - b.x).forEach(word => {
+                const key = cellKey(word.x, word.y);
+                if (!starts.has(key)) starts.set(key, starts.size + 1);
+                word.number = starts.get(key);
+            });
+            return { cells, placed, bounds };
+        }
+
+        function getCandidates(word, placed, cells) {
+            const candidates = [];
+            const seen = new Set();
+
+            placed.forEach(existing => {
+                const direction = existing.direction === 'across' ? 'down' : 'across';
+                [...word.answer].forEach((letter, wordIndex) => {
+                    [...existing.answer].forEach((existingLetter, existingIndex) => {
+                        if (letter !== existingLetter) return;
+                        const intersection = wordCoordinate(existing, existingIndex);
+                        const x = intersection.x - (direction === 'across' ? wordIndex : 0);
+                        const y = intersection.y - (direction === 'down' ? wordIndex : 0);
+                        const placement = { ...word, direction, x, y };
+                        const key = `${direction}:${x}:${y}`;
+                        if (seen.has(key) || !isValidPlacement(placement, cells)) return;
+                        seen.add(key);
+                        const intersections = countIntersections(placement, cells);
+                        candidates.push({ ...placement, intersections, area: getCandidateArea(placement, cells) });
+                    });
+                });
+            });
+            return candidates;
+        }
+
+        function isValidPlacement(word, cells) {
+            const dx = word.direction === 'across' ? 1 : 0;
+            const dy = word.direction === 'down' ? 1 : 0;
+            if (cells.has(cellKey(word.x - dx, word.y - dy))) return false;
+            const after = wordCoordinate(word, word.answer.length - 1);
+            if (cells.has(cellKey(after.x + dx, after.y + dy))) return false;
+
+            let intersections = 0;
+            for (let index = 0; index < word.answer.length; index++) {
+                const point = wordCoordinate(word, index);
+                const existing = cells.get(cellKey(point.x, point.y));
+                if (existing) {
+                    if (existing.letter !== word.answer[index]) return false;
+                    intersections++;
+                    continue;
+                }
+                const sideA = word.direction === 'across' ? cellKey(point.x, point.y - 1) : cellKey(point.x - 1, point.y);
+                const sideB = word.direction === 'across' ? cellKey(point.x, point.y + 1) : cellKey(point.x + 1, point.y);
+                if (cells.has(sideA) || cells.has(sideB)) return false;
+            }
+            return intersections > 0;
+        }
+
+        function countIntersections(word, cells) {
+            return [...word.answer].reduce((count, _, index) => {
+                const point = wordCoordinate(word, index);
+                return count + (cells.has(cellKey(point.x, point.y)) ? 1 : 0);
+            }, 0);
+        }
+
+        function getBounds(cells) {
+            const points = [...cells.values()];
+            return {
+                minX: Math.min(...points.map(point => point.x)),
+                maxX: Math.max(...points.map(point => point.x)),
+                minY: Math.min(...points.map(point => point.y)),
+                maxY: Math.max(...points.map(point => point.y))
+            };
+        }
+
+        function getCandidateArea(word, cells) {
+            const projected = new Map(cells);
+            [...word.answer].forEach((letter, index) => {
+                const point = wordCoordinate(word, index);
+                projected.set(cellKey(point.x, point.y), { letter, x: point.x, y: point.y });
+            });
+            const bounds = getBounds(projected);
+            return (bounds.maxX - bounds.minX + 1) * (bounds.maxY - bounds.minY + 1);
+        }
+
+        function renderMenu() {
+            elements.puzzleList.replaceChildren();
+            PUZZLES.forEach((puzzle, index) => {
+                const button = document.createElement('button');
+                const number = document.createElement('span');
+                button.className = 'puzzle-btn';
+                button.type = 'button';
+                number.className = 'puzzle-number';
+                number.textContent = `${index + 1}번`;
+                button.append(number);
+                button.addEventListener('click', () => openPuzzle(puzzle.id));
+                elements.puzzleList.appendChild(button);
+            });
+        }
+
+        function openPuzzle(id) {
+            playerName = elements.studentName.value.trim();
+            if (!playerName) {
+                elements.menuStatus.textContent = '이름을 입력한 뒤 퍼즐을 골라 주세요.';
+                elements.studentName.focus();
+                return;
+            }
+            localStorage.setItem('crosswordPlayerName', playerName);
+            activePuzzle = PUZZLES.find(puzzle => puzzle.id === id);
+            if (!activePuzzle) return;
+            activeLayout = buildLayout(activePuzzle.words);
+            completed = false;
+            elements.menuView.classList.add('hidden');
+            elements.puzzleView.classList.remove('hidden');
+            elements.puzzleHeading.textContent = activePuzzle.title;
+            setStatus('');
+            renderPuzzle();
+            startTimer();
+            history.replaceState(null, '', `crossword.html?game=${encodeURIComponent(id)}`);
+        }
+
+        function renderPuzzle() {
+            const { cells, placed, bounds } = activeLayout;
+            const startNumbers = new Map(placed.map(word => [cellKey(word.x, word.y), word.number]));
+            elements.grid.replaceChildren();
+            elements.grid.style.gridTemplateColumns = `repeat(${bounds.maxX - bounds.minX + 1}, var(--cell-size))`;
+
+            for (let y = bounds.minY; y <= bounds.maxY; y++) {
+                for (let x = bounds.minX; x <= bounds.maxX; x++) {
+                    const cell = cells.get(cellKey(x, y));
+                    const box = document.createElement('div');
+                    box.className = 'grid-cell';
+                    if (!cell) {
+                        box.classList.add('blank');
+                        elements.grid.appendChild(box);
+                        continue;
+                    }
+                    const number = startNumbers.get(cellKey(x, y));
+                    if (number) {
+                        const label = document.createElement('span');
+                        label.className = 'cell-number';
+                        label.textContent = String(number);
+                        box.appendChild(label);
+                    }
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.autocomplete = 'off';
+                    input.autocapitalize = 'characters';
+                    input.spellcheck = false;
+                    input.dataset.key = cellKey(x, y);
+                    input.addEventListener('input', handleCellInput);
+                    input.addEventListener('keydown', handleCellKeydown);
+                    box.appendChild(input);
+                    elements.grid.appendChild(box);
+                }
+            }
+
+            renderClues(placed);
+            updateProgress();
+        }
+
+        function renderClues(placed) {
+            elements.acrossList.replaceChildren();
+            elements.downList.replaceChildren();
+            ['across', 'down'].forEach(direction => {
+                const list = direction === 'across' ? elements.acrossList : elements.downList;
+                placed.filter(word => word.direction === direction).sort((a, b) => a.number - b.number).forEach(word => {
+                    const item = document.createElement('li');
+                    const button = document.createElement('button');
+                    button.className = 'clue-btn';
+                    button.type = 'button';
+                    button.innerHTML = `<span class="clue-num">${word.number}.</span> ${word.clue}`;
+                    button.addEventListener('click', () => focusWord(word));
+                    item.appendChild(button);
+                    list.appendChild(item);
+                });
+            });
+        }
+
+        function focusWord(word) {
+            const first = wordCoordinate(word, 0);
+            const input = elements.grid.querySelector(`input[data-key="${cellKey(first.x, first.y)}"]`);
+            if (input) input.focus();
+        }
+
+        function handleCellInput(event) {
+            const input = event.currentTarget;
+            input.value = input.value.replace(/[^a-z]/gi, '').slice(-1).toUpperCase();
+            input.classList.remove('correct', 'wrong');
+            updateProgress();
+            if (!input.value) return;
+            const inputs = [...elements.grid.querySelectorAll('input')];
+            const next = inputs[inputs.indexOf(input) + 1];
+            if (next) next.focus();
+        }
+
+        function handleCellKeydown(event) {
+            if (event.key !== 'Backspace' || event.currentTarget.value) return;
+            const inputs = [...elements.grid.querySelectorAll('input')];
+            const previous = inputs[inputs.indexOf(event.currentTarget) - 1];
+            if (previous) previous.focus();
+        }
+
+        function updateProgress() {
+            const inputs = [...elements.grid.querySelectorAll('input')];
+            const filled = inputs.filter(input => input.value).length;
+            elements.puzzleProgress.textContent = `${filled} / ${inputs.length}`;
+        }
+
+        function startTimer() {
+            stopTimer();
+            startedAt = Date.now();
+            updateTimer();
+            timerId = window.setInterval(updateTimer, 250);
+        }
+
+        function stopTimer() {
+            if (timerId) window.clearInterval(timerId);
+            timerId = null;
+        }
+
+        function updateTimer() {
+            const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+            elements.timer.textContent = formatTime(seconds);
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+
+        function checkAnswers() {
+            let wrong = 0;
+            let empty = 0;
+            elements.grid.querySelectorAll('input').forEach(input => {
+                const expected = activeLayout.cells.get(input.dataset.key).letter.toUpperCase();
+                input.classList.remove('correct', 'wrong');
+                if (!input.value) {
+                    empty++;
+                    return;
+                }
+                input.classList.add(input.value === expected ? 'correct' : 'wrong');
+                if (input.value !== expected) wrong++;
+            });
+            if (empty) {
+                setStatus(`빈 칸이 ${empty}개 있습니다. 모두 채운 뒤 확인해 주세요.`, 'error');
+                return;
+            }
+            if (wrong) {
+                setStatus(`${wrong}칸을 다시 확인해 주세요.`, 'error');
+                return;
+            }
+            finishPuzzle();
+        }
+
+        async function finishPuzzle() {
+            if (completed) return;
+            completed = true;
+            stopTimer();
+            const elapsedSeconds = Math.max(1, Math.ceil((Date.now() - startedAt) / 1000));
+            elements.timer.textContent = formatTime(elapsedSeconds);
+            setStatus(`정답입니다. ${elapsedSeconds}초 기록을 저장 중입니다.`, 'success');
+
+            try {
+                const body = new URLSearchParams({
+                    action: 'saveCrosswordResult',
+                    studentName: playerName,
+                    puzzleId: activePuzzle.id,
+                    elapsedSeconds: String(elapsedSeconds)
+                });
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString()
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!data || !data.ok) throw new Error('save failed');
+                setStatus(`정답입니다. ${elapsedSeconds}초 기록이 저장됐습니다.`, 'success');
+            } catch (error) {
+                setStatus(`정답입니다. ${elapsedSeconds}초입니다. 기록 저장은 잠시 후 다시 시도해 주세요.`, 'success');
+            }
+        }
+
+        function showRankings() {
+            stopTimer();
+            elements.menuView.classList.add('hidden');
+            elements.puzzleView.classList.add('hidden');
+            elements.rankingView.classList.remove('hidden');
+            renderRankingTabs();
+            loadRanking(rankingPuzzleId);
+            history.replaceState(null, '', 'crossword.html?rankings=true');
+        }
+
+        function renderRankingTabs() {
+            elements.rankingTabs.replaceChildren();
+            PUZZLES.forEach(puzzle => {
+                const button = document.createElement('button');
+                button.className = `ranking-tab${puzzle.id === rankingPuzzleId ? ' active' : ''}`;
+                button.type = 'button';
+                button.textContent = puzzle.title;
+                button.addEventListener('click', () => {
+                    rankingPuzzleId = puzzle.id;
+                    renderRankingTabs();
+                    loadRanking(rankingPuzzleId);
+                });
+                elements.rankingTabs.appendChild(button);
+            });
+            elements.rankingHeading.textContent = `${rankingPuzzleId}번 빠른 기록 TOP 10`;
+        }
+
+        async function loadRanking(puzzleId) {
+            renderRanking([]);
+            try {
+                const response = await fetch(`${scriptURL}?action=getCrosswordLeaderboard&puzzleId=${encodeURIComponent(puzzleId)}&t=${Date.now()}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data && data.ok) renderRanking(data.leaderboard || []);
+            } catch (error) {
+                renderRanking([]);
+            }
+        }
+
+        function renderRanking(entries) {
+            elements.rankingList.replaceChildren();
+            if (!entries.length) {
+                const empty = document.createElement('li');
+                empty.className = 'ranking-empty';
+                empty.textContent = '아직 기록이 없습니다.';
+                elements.rankingList.appendChild(empty);
+                return;
+            }
+            entries.forEach(entry => {
+                const item = document.createElement('li');
+                const rank = document.createElement('span');
+                const name = document.createElement('span');
+                const time = document.createElement('span');
+                rank.className = 'ranking-rank';
+                name.className = 'ranking-name';
+                time.className = 'ranking-time';
+                rank.textContent = `${entry.rank}위`;
+                name.textContent = entry.studentName || '**';
+                time.textContent = `${entry.elapsedSeconds}초`;
+                item.append(rank, name, time);
+                elements.rankingList.appendChild(item);
+            });
+        }
+
+        function resetPuzzle() {
+            elements.grid.querySelectorAll('input').forEach(input => {
+                input.value = '';
+                input.classList.remove('correct', 'wrong');
+            });
+            updateProgress();
+            setStatus('');
+            const first = elements.grid.querySelector('input');
+            if (first) first.focus();
+        }
+
+        function setStatus(message, type = '') {
+            elements.status.textContent = message;
+            elements.status.className = `status${type ? ` ${type}` : ''}`;
+        }
+
+        elements.checkBtn.addEventListener('click', checkAnswers);
+        elements.resetBtn.addEventListener('click', resetPuzzle);
+        elements.backBtn.addEventListener('click', () => {
+            stopTimer();
+            elements.puzzleView.classList.add('hidden');
+            elements.menuView.classList.remove('hidden');
+            history.replaceState(null, '', 'crossword.html');
+        });
+
+        elements.showRankingsBtn.addEventListener('click', showRankings);
+        elements.rankingBackBtn.addEventListener('click', () => {
+            elements.rankingView.classList.add('hidden');
+            elements.menuView.classList.remove('hidden');
+            history.replaceState(null, '', 'crossword.html');
+        });
+
+        elements.studentName.value = playerName;
+        elements.studentName.addEventListener('input', () => {
+            elements.menuStatus.textContent = '';
+        });
+        renderMenu();
+        const requestedId = new URLSearchParams(location.search).get('game');
+        if (requestedId) openPuzzle(requestedId);
+        if (new URLSearchParams(location.search).get('rankings') === 'true') showRankings();
+    </script>
+</body>
+</html>

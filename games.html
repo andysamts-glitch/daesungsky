@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>게임 | 대성 SKY</title>
+    <style>
+        :root {
+            --ink: #26313d;
+            --muted: #647181;
+            --line: #dbe2e8;
+            --page: #f4f6f8;
+            --teal: #197c79;
+            --teal-dark: #126460;
+            --blue: #2d6fb7;
+            --blue-dark: #1f5790;
+            --orange: #a65d10;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background: var(--page); color: var(--ink); font-family: "Malgun Gothic", Arial, sans-serif; }
+        button { font: inherit; cursor: pointer; }
+        .page { width: min(680px, calc(100% - 32px)); min-height: calc(100vh - 64px); margin: 32px auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+        .brand h1 { margin: 0; color: var(--teal-dark); font-size: 23px; letter-spacing: 0; }
+        .brand p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .home-btn { flex: 0 0 auto; border: 1px solid #d7a45d; border-radius: 6px; background: #fff; color: var(--orange); padding: 7px 10px; font-size: 13px; font-weight: 700; }
+        .home-btn:hover { background: #fff5e7; }
+        main { padding: 30px 22px 34px; }
+        h2 { margin: 0 0 20px; color: var(--ink); font-size: 21px; }
+        .game-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .game-option { min-height: 146px; border: 1px solid var(--line); border-radius: 8px; padding: 18px; color: #fff; text-align: left; }
+        .game-option strong { display: block; font-size: 22px; letter-spacing: 0; }
+        .game-option span { display: block; margin-top: 8px; color: rgba(255,255,255,0.86); font-size: 13px; line-height: 1.5; }
+        .relay { background: var(--teal); }
+        .relay:hover { background: var(--teal-dark); }
+        .crossword { background: var(--blue); }
+        .crossword:hover { background: var(--blue-dark); }
+
+        @media (max-width: 560px) {
+            .page { width: 100%; min-height: 100vh; margin: 0; border: 0; border-radius: 0; }
+            .topbar { padding: 14px 16px; }
+            main { padding: 24px 16px; }
+            .game-list { grid-template-columns: 1fr; }
+            .game-option { min-height: 118px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div class="brand">
+                <h1>GAME</h1>
+                <p>대성 SKY Test Center</p>
+            </div>
+            <button class="home-btn" type="button" onclick="location.href='index.html'">홈으로</button>
+        </header>
+
+        <main>
+            <h2>게임</h2>
+            <div class="game-list">
+                <button class="game-option relay" type="button" onclick="location.href='word-chain.html'">
+                    <strong>끝말잇기</strong>
+                    <span>TOEFL · TOEIC 단어</span>
+                </button>
+                <button class="game-option crossword" type="button" onclick="location.href='crossword.html'">
+                    <strong>크로스퍼즐</strong>
+                    <span>영어 뜻풀이로 단어 완성</span>
+                </button>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
