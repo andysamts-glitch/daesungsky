@@ -331,6 +331,7 @@
         let rankingPuzzleId = '1';
         let hintsRemaining = 5;
         let selectedWord = null;
+        let selectedCellKey = '';
 
         function cellKey(x, y) {
             return `${x},${y}`;
@@ -500,6 +501,7 @@
             completed = false;
             hintsRemaining = 5;
             selectedWord = null;
+            selectedCellKey = '';
             elements.menuView.classList.add('hidden');
             elements.puzzleView.classList.remove('hidden');
             elements.puzzleHeading.textContent = activePuzzle.title;
@@ -518,6 +520,7 @@
             elements.completedList.replaceChildren();
             elements.completedWords.classList.add('hidden');
             selectedWord = null;
+            selectedCellKey = '';
             elements.grid.style.gridTemplateColumns = `repeat(${bounds.maxX - bounds.minX + 1}, var(--cell-size))`;
 
             for (let y = bounds.minY; y <= bounds.maxY; y++) {
@@ -597,6 +600,7 @@
 
         function selectWordAtCell(key) {
             if (!activeLayout) return;
+            selectedCellKey = key;
             const matches = activeLayout.placed.filter(word => [...word.answer].some((_, index) => {
                 const point = wordCoordinate(word, index);
                 return cellKey(point.x, point.y) === key;
@@ -676,24 +680,27 @@
                 setStatus('힌트가 필요한 단어 설명이나 칸을 먼저 눌러 주세요.');
                 return;
             }
-            const hiddenLetters = [...selectedWord.answer].map((letter, index) => {
-                const point = wordCoordinate(selectedWord, index);
-                const input = elements.grid.querySelector(`input[data-key="${cellKey(point.x, point.y)}"]`);
-                return { input, letter: letter.toUpperCase() };
-            }).filter(item => item.input && item.input.value !== item.letter);
-            if (!hiddenLetters.length) {
-                setStatus('이 단어는 이미 맞혔습니다. 다른 단어를 골라 주세요.');
+            const input = selectedCellKey
+                ? elements.grid.querySelector(`input[data-key="${selectedCellKey}"]`)
+                : null;
+            const cell = input ? activeLayout.cells.get(selectedCellKey) : null;
+            if (!input || !cell) {
+                setStatus('힌트가 필요한 칸을 먼저 눌러 주세요.');
                 return;
             }
-            const target = hiddenLetters[Math.floor(Math.random() * hiddenLetters.length)];
-            target.input.value = target.letter;
-            target.input.classList.remove('correct', 'wrong');
-            target.input.classList.add('hinted');
+            const expected = cell.letter.toUpperCase();
+            if (input.value === expected) {
+                setStatus('이 칸은 이미 맞혔습니다. 다른 칸을 눌러 주세요.');
+                return;
+            }
+            input.value = expected;
+            input.classList.remove('correct', 'wrong');
+            input.classList.add('hinted');
             hintsRemaining--;
             updateProgress();
             updateCompletedWords();
             updateHintButton();
-            setStatus(`${selectedWord.number}번에서 글자 한 칸을 알려드렸습니다. ${hintsRemaining}회 남았습니다.`);
+            setStatus(`선택한 칸의 글자를 알려드렸습니다. ${hintsRemaining}회 남았습니다.`);
             setHintMeaning(`${selectedWord.number}번 뜻: ${selectedWord.meaning}`);
         }
 
