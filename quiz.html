@@ -550,9 +550,15 @@
 
     function getSpellingBlankNumber(q) {
         const question = String((q && q.question) || "");
-        const numberMatch = question.match(/\((\d+)\)/);
-        const hasLetterBlank = /[A-Za-z]+(?:\s*_\s*)+\(\d+\)/.test(question);
-        return numberMatch && hasLetterBlank ? Number(numberMatch[1]) : null;
+        const hasLetterBlank = /[A-Za-z]+(?:\s*_\s*)+/.test(question);
+        if(!hasLetterBlank) return null;
+
+        // Some TOEFL sets label blanks as "(1)", while others use "Q1.".
+        const parenthesizedNumber = question.match(/\((\d+)\)/);
+        if(parenthesizedNumber) return Number(parenthesizedNumber[1]);
+
+        const questionNumber = question.match(/^\s*Q?\s*(\d+)\s*[.:]/i);
+        return questionNumber ? Number(questionNumber[1]) : null;
     }
 
     function initializeSpellingBatch() {
