@@ -82,6 +82,7 @@
         .status { min-height: 20px; margin: 0 0 14px; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; }
         .status.success { color: var(--green); }
         .status.error { color: var(--coral); }
+        .hint-meaning { margin: -6px 0 14px; color: var(--teal-dark); font-size: 13px; font-weight: 700; text-align: center; }
         .completed-words { margin: 0 0 18px; border-top: 1px solid var(--line); padding-top: 16px; }
         .completed-words h3 { margin: 0 0 8px; color: var(--ink); font-size: 16px; }
         .completed-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: 0; padding: 0; list-style: none; }
@@ -187,6 +188,7 @@
                     <button id="reset-btn" class="reset-btn" type="button">다시 풀기</button>
                 </div>
                 <p id="status" class="status" role="status"></p>
+                <p id="hint-meaning" class="hint-meaning hidden" aria-live="polite"></p>
 
                 <section id="completed-words" class="completed-words hidden" aria-live="polite">
                     <h3>맞힌 단어</h3>
@@ -310,6 +312,7 @@
             acrossList: document.getElementById('across-list'),
             downList: document.getElementById('down-list'),
             status: document.getElementById('status'),
+            hintMeaning: document.getElementById('hint-meaning'),
             checkBtn: document.getElementById('check-btn'),
             hintBtn: document.getElementById('hint-btn'),
             resetBtn: document.getElementById('reset-btn'),
@@ -501,6 +504,7 @@
             elements.puzzleView.classList.remove('hidden');
             elements.puzzleHeading.textContent = activePuzzle.title;
             setStatus('');
+            setHintMeaning('');
             renderPuzzle();
             updateHintButton();
             startTimer();
@@ -690,6 +694,7 @@
             updateCompletedWords();
             updateHintButton();
             setStatus(`${selectedWord.number}번에서 글자 한 칸을 알려드렸습니다. ${hintsRemaining}회 남았습니다.`);
+            setHintMeaning(`${selectedWord.number}번 뜻: ${selectedWord.meaning}`);
         }
 
         function startTimer() {
@@ -847,6 +852,7 @@
             updateProgress();
             updateCompletedWords();
             setStatus('');
+            setHintMeaning('');
             const first = elements.grid.querySelector('input');
             if (first) first.focus();
         }
@@ -854,6 +860,11 @@
         function setStatus(message, type = '') {
             elements.status.textContent = message;
             elements.status.className = `status${type ? ` ${type}` : ''}`;
+        }
+
+        function setHintMeaning(message) {
+            elements.hintMeaning.textContent = message;
+            elements.hintMeaning.classList.toggle('hidden', !message);
         }
 
         elements.checkBtn.addEventListener('click', checkAnswers);
