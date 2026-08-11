@@ -672,23 +672,24 @@
                 setStatus('힌트가 필요한 단어 설명이나 칸을 먼저 눌러 주세요.');
                 return;
             }
-            if (isWordComplete(selectedWord)) {
+            const hiddenLetters = [...selectedWord.answer].map((letter, index) => {
+                const point = wordCoordinate(selectedWord, index);
+                const input = elements.grid.querySelector(`input[data-key="${cellKey(point.x, point.y)}"]`);
+                return { input, letter: letter.toUpperCase() };
+            }).filter(item => item.input && item.input.value !== item.letter);
+            if (!hiddenLetters.length) {
                 setStatus('이 단어는 이미 맞혔습니다. 다른 단어를 골라 주세요.');
                 return;
             }
-            [...selectedWord.answer].forEach((letter, index) => {
-                const point = wordCoordinate(selectedWord, index);
-                const input = elements.grid.querySelector(`input[data-key="${cellKey(point.x, point.y)}"]`);
-                if (!input) return;
-                input.value = letter.toUpperCase();
-                input.classList.remove('correct', 'wrong');
-                input.classList.add('hinted');
-            });
+            const target = hiddenLetters[Math.floor(Math.random() * hiddenLetters.length)];
+            target.input.value = target.letter;
+            target.input.classList.remove('correct', 'wrong');
+            target.input.classList.add('hinted');
             hintsRemaining--;
             updateProgress();
             updateCompletedWords();
             updateHintButton();
-            setStatus(`${selectedWord.number}번 정답을 알려드렸습니다. ${hintsRemaining}회 남았습니다.`);
+            setStatus(`${selectedWord.number}번에서 글자 한 칸을 알려드렸습니다. ${hintsRemaining}회 남았습니다.`);
         }
 
         function startTimer() {
