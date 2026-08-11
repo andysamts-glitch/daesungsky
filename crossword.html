@@ -540,6 +540,7 @@
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.maxLength = 1;
+                    input.inputMode = 'text';
                     input.autocomplete = 'off';
                     input.autocapitalize = 'characters';
                     input.spellcheck = false;
@@ -588,10 +589,6 @@
             input.classList.remove('correct', 'wrong', 'hinted');
             updateProgress();
             updateCompletedWords();
-            if (!input.value) return;
-            const inputs = [...elements.grid.querySelectorAll('input')];
-            const next = inputs[inputs.indexOf(input) + 1];
-            if (next) next.focus();
         }
 
         function handleCellKeydown(event) {
