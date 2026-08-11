@@ -19,6 +19,11 @@
         .paragraph-number { display: inline-block; color: #2b6cb0; font-weight: bold; margin-right: 8px; user-select: none; }
         .paragraph-body { white-space: pre-wrap; }
         mark { background-color: #e9edf3; padding: 0 2px; border-radius: 3px; }
+        .spelling-blank { display: inline; padding: 1px 3px; border: 0; border-bottom: 2px dashed #718096; border-radius: 3px; background: transparent; color: #1a365d; font: inherit; font-weight: 800; cursor: pointer; }
+        .spelling-blank:hover, .spelling-blank.active { border-bottom-color: #2b6cb0; background: #ebf8ff; color: #1a365d; }
+        .spelling-blank.active { box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.13); }
+        .spelling-blank.correct { border-bottom-color: #38a169; background: #f0fff4; color: #276749; }
+        .spelling-blank.wrong { border-bottom-color: #e53e3e; background: #fff5f5; color: #9b2c2c; }
         .quiz-box { min-width: 0; min-height: 0; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow-y: auto; }
         
         /* 🌟 페세지가 없을 때 퀴즈 박스를 예쁘게 중앙으로 모아주는 마법! */
@@ -226,6 +231,9 @@
     let writingSubmitted = false;
     let writingLeaveGuardActive = false;
     let writingExitConfirmed = false;
+    let spellingBatchIndices = [];
+    let spellingQuestionByNumber = {};
+    let activeSpellingBlankNumber = null;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -289,10 +297,13 @@
             }
 
             quizData = data.questions;
-            
+            initializeSpellingBatch();
+
             if(quizData.length === 0) {
                 alert("등록된 문제가 없습니다.");
                 location.href = "index.html";
+            } else if(spellingBatchIndices.length) {
+                selectSpellingBlank(getSpellingBlankNumber(quizData[spellingBatchIndices[0]]));
             } else {
                 renderQuiz();
             }
@@ -537,6 +548,169 @@
         }
     }
 
+    function getSpellingBlankNumber(q) {
+        const question = String((q && q.question) || "");
+        const numberMatch = question.match(/\((\d+)\)/);
+        const hasLetterBlank = /[A-Za-z]+(?:\s*_\s*)+\(\d+\)/.test(question);
+        return numberMatch && hasLetterBlank ? Number(numberMatch[1]) : null;
+    }
+
+    function initializeSpellingBatch() {
+        spellingBatchIndices = [];
+        spellingQuestionByNumber = {};
+        activeSpellingBlankNumber = null;
+
+        for(let index = 0; index < quizData.length; index++) {
+            const number = getSpellingBlankNumber(quizData[index]);
+            if(number === null) break;
+            spellingBatchIndices.push(index);
+            spellingQuestionByNumber[number] = index;
+        }
+
+        if(spellingBatchIndices.length < 2) {
+            spellingBatchIndices = [];
+            spellingQuestionByNumber = {};
+        }
+    }
+
+    function isSpellingBatchActive() {
+        return spellingBatchIndices.includes(currentIndex);
+    }
+
+    function getSpellingAnsweredCount() {
+        return spellingBatchIndices.filter(index => quizData[index].answered).length;
+    }
+
+    function isSpellingBatchComplete() {
+        return spellingBatchIndices.length > 0 && getSpellingAnsweredCount() === spellingBatchIndices.length;
+    }
+
+    function selectSpellingBlank(number) {
+        const questionIndex = spellingQuestionByNumber[number];
+        if(questionIndex === undefined) return;
+        currentIndex = questionIndex;
+        activeSpellingBlankNumber = number;
+        renderSpellingBatch();
+    }
+
+    function renderSpellingBatch() {
+        const q = quizData[currentIndex];
+        const optionsArea = document.getElementById('options-area');
+        const subjectiveArea = document.getElementById('subjective-area');
+        const subjectiveInput = document.getElementById('subjective-input');
+        const sentenceArea = document.getElementById('sentence-area');
+        const feedback = document.getElementById('feedback');
+        const nextButton = document.getElementById('next-question-btn');
+        const blankNumber = getSpellingBlankNumber(q);
+
+        document.getElementById('progress-text').innerText = `빈칸 ${getSpellingAnsweredCount()} / ${spellingBatchIndices.length}`;
+        document.getElementById('question-text').innerText = `${blankNumber}번 빈칸`;
+        optionsArea.innerHTML = "";
+        optionsArea.classList.add('hidden');
+        sentenceArea.classList.add('hidden');
+        subjectiveArea.classList.remove('hidden');
+        subjectiveInput.value = q.draftAnswer || "";
+        subjectiveInput.placeholder = `${blankNumber}번에 들어갈 글자를 입력하세요`;
+        subjectiveInput.disabled = !!q.answered;
+        subjectiveInput.oninput = () => {
+            q.draftAnswer = subjectiveInput.value;
+        };
+        subjectiveArea.querySelectorAll('button').forEach(button => button.disabled = !!q.answered);
+        feedback.innerHTML = "";
+        nextButton.classList.toggle('hidden', !isSpellingBatchComplete());
+        nextButton.innerText = "다음 문제";
+
+        renderSpellingPassage(currentPassage);
+        if(!q.answered) subjectiveInput.focus();
+    }
+
+    function checkSpellingBlankAnswer() {
+        const q = quizData[currentIndex];
+        const input = document.getElementById('subjective-input');
+        const feedback = document.getElementById('feedback');
+        const userAnswer = input.value.trim();
+        const correctAnswer = String(q.answer || "").trim();
+
+        if(q.answered) return;
+        q.draftAnswer = userAnswer;
+        recordCurrentAnswer(isSubjectiveAnswerCorrect(userAnswer, correctAnswer));
+        input.disabled = true;
+        document.querySelectorAll('#subjective-area button').forEach(button => button.disabled = true);
+
+        if(q.userCorrect) {
+            feedback.innerText = "정답입니다! ⭕";
+            feedback.style.color = "#38a169";
+        } else {
+            showWrongFeedback();
+        }
+
+        renderSpellingPassage(currentPassage);
+        if(isSpellingBatchComplete()) {
+            document.getElementById('next-question-btn').classList.remove('hidden');
+        }
+    }
+
+    function renderSpellingPassage(passage) {
+        document.querySelector('#passage-container h2').innerText = "📖 지문";
+        const passageContainer = document.getElementById('passage-container');
+        const passageText = document.getElementById('passage-text');
+        const savedScrollTop = passageContainer.scrollTop;
+        const normalized = String(passage || "").replace(/\r\n/g, "\n").trim();
+        const rawParagraphs = normalized.split(/\n\s*\n|\n/);
+        const paragraphs = rawParagraphs.map(p => p.trim()).filter(Boolean);
+
+        passageText.innerHTML = "";
+        let paragraphNumber = 1;
+
+        paragraphs.forEach((paragraph, index) => {
+            if(isPassageTitle(paragraph, index, paragraphs.length)) {
+                const titleEl = document.createElement('div');
+                titleEl.className = 'passage-title';
+                titleEl.innerHTML = formatSpellingPassageMarkup(paragraph.replace(/^#\s*/, ''));
+                passageText.appendChild(titleEl);
+                paragraphNumber = 1;
+                return;
+            }
+
+            const row = document.createElement('p');
+            row.className = 'passage-paragraph paragraph-body';
+            row.innerHTML = `<span class="paragraph-number">${paragraphNumber}.</span>${formatSpellingPassageMarkup(paragraph)}`;
+            passageText.appendChild(row);
+            paragraphNumber++;
+        });
+
+        passageContainer.scrollTop = savedScrollTop;
+    }
+
+    function formatSpellingPassageMarkup(text) {
+        const replacements = [];
+        const tokenized = String(text).replace(/([A-Za-z]+(?:\s*_\s*)+)\((\d+)\)/g, (match, stemWithBlanks, numberText) => {
+            const number = Number(numberText);
+            const questionIndex = spellingQuestionByNumber[number];
+            if(questionIndex === undefined) return match;
+
+            const q = quizData[questionIndex];
+            const stem = stemWithBlanks.replace(/[\s_]/g, "");
+            const draftAnswer = String(q.draftAnswer || "").trim();
+            const displayText = draftAnswer ? `${stem}${draftAnswer} (${number})` : match;
+            const stateClass = q.answered ? (q.userCorrect ? ' correct' : ' wrong') : '';
+            const activeClass = number === activeSpellingBlankNumber ? ' active' : '';
+            const marker = `%%SPELLING_BLANK_${number}%%`;
+
+            replacements.push({
+                marker: marker,
+                html: `<button type="button" class="spelling-blank${stateClass}${activeClass}" onclick="selectSpellingBlank(${number})">${escapeHtml(displayText)}</button>`
+            });
+            return marker;
+        });
+
+        let markup = formatPassageMarkup(tokenized);
+        replacements.forEach(replacement => {
+            markup = markup.replace(replacement.marker, replacement.html);
+        });
+        return markup;
+    }
+
     function renderPassage(passage) {
         document.querySelector('#passage-container h2').innerText = "📖 지문";
         const passageText = document.getElementById('passage-text');
@@ -646,6 +820,8 @@
             subjectiveArea.classList.remove('hidden');
             resetPassageForNormalQuestion();
             subjectiveInput.value = "";
+            subjectiveInput.placeholder = "정답을 입력하세요";
+            subjectiveInput.oninput = null;
             subjectiveInput.disabled = false;
             subjectiveArea.querySelectorAll('button').forEach(btn => btn.disabled = false);
             subjectiveInput.focus();
@@ -857,6 +1033,11 @@
     }
 
     function checkSubjective() {
+        if(isSpellingBatchActive()) {
+            checkSpellingBlankAnswer();
+            return;
+        }
+
         const input = document.getElementById('subjective-input');
         const feedback = document.getElementById('feedback');
         
@@ -1031,17 +1212,35 @@
     }
 
     function nextQuestion() {
+        if(isSpellingBatchActive()) {
+            if(!isSpellingBatchComplete()) return;
+            currentIndex = Math.max(...spellingBatchIndices) + 1;
+            spellingBatchIndices = [];
+            spellingQuestionByNumber = {};
+            activeSpellingBlankNumber = null;
+            if(currentIndex < quizData.length) {
+                renderQuiz();
+            } else {
+                showQuizResults();
+            }
+            return;
+        }
+
         currentIndex++;
         if(currentIndex < quizData.length) {
             renderQuiz();
         } else {
-            const score = getScoreCounts();
-            document.getElementById('main-layout').classList.add('hidden');
-            document.getElementById('home-btn').classList.add('hidden');
-            document.getElementById('result-screen').classList.remove('hidden');
-            document.getElementById('score-text').innerText = `결과: ${score.questionCount}문제 중 ${score.correctCount}개 정답, ${score.wrongCount}개 오답`;
-            saveTestCompletion();
+            showQuizResults();
         }
+    }
+
+    function showQuizResults() {
+        const score = getScoreCounts();
+        document.getElementById('main-layout').classList.add('hidden');
+        document.getElementById('home-btn').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        document.getElementById('score-text').innerText = `결과: ${score.questionCount}문제 중 ${score.correctCount}개 정답, ${score.wrongCount}개 오답`;
+        saveTestCompletion();
     }
 
     function goHome() {
