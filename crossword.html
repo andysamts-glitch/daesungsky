@@ -96,7 +96,8 @@
         .clue-list { margin: 0; padding: 0; list-style: none; }
         .clue-list li { border-bottom: 1px solid #eaf0f4; }
         .clue-btn { width: 100%; border: 0; background: transparent; color: var(--ink); padding: 10px 3px; text-align: left; line-height: 1.45; font-size: 13px; }
-        .clue-btn:hover { background: #f7fbff; }
+        .clue-btn:hover, .clue-btn.selected { background: #f0f7fc; }
+        .clue-btn.selected { box-shadow: inset 3px 0 0 var(--blue); }
         .clue-num { color: var(--blue); font-weight: 800; }
         .ranking { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px; }
         .ranking-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -182,7 +183,7 @@
 
                 <div class="action-row">
                     <button id="check-btn" class="check-btn" type="button">정답 확인</button>
-                    <button id="hint-btn" class="hint-btn" type="button">힌트 3회</button>
+                    <button id="hint-btn" class="hint-btn" type="button">힌트 5회</button>
                     <button id="reset-btn" class="reset-btn" type="button">다시 풀기</button>
                 </div>
                 <p id="status" class="status" role="status"></p>
@@ -333,7 +334,8 @@
         let timerId = null;
         let completed = false;
         let rankingPuzzleId = '1';
-        let hintsRemaining = 3;
+        let hintsRemaining = 5;
+        let selectedWord = null;
 
         function cellKey(x, y) {
             return `${x},${y}`;
@@ -501,7 +503,8 @@
             if (!activePuzzle) return;
             activeLayout = buildLayout(activePuzzle.words, activePuzzle.layout);
             completed = false;
-            hintsRemaining = 3;
+            hintsRemaining = 5;
+            selectedWord = null;
             elements.menuView.classList.add('hidden');
             elements.puzzleView.classList.remove('hidden');
             elements.puzzleHeading.textContent = activePuzzle.title;
@@ -518,6 +521,7 @@
             elements.grid.replaceChildren();
             elements.completedList.replaceChildren();
             elements.completedWords.classList.add('hidden');
+            selectedWord = null;
             elements.grid.style.gridTemplateColumns = `repeat(${bounds.maxX - bounds.minX + 1}, var(--cell-size))`;
 
             for (let y = bounds.minY; y <= bounds.maxY; y++) {
@@ -547,6 +551,7 @@
                     input.dataset.key = cellKey(x, y);
                     input.addEventListener('input', handleCellInput);
                     input.addEventListener('keydown', handleCellKeydown);
+                    input.addEventListener('focus', () => selectWordAtCell(input.dataset.key));
                     box.appendChild(input);
                     elements.grid.appendChild(box);
                 }
@@ -567,10 +572,11 @@
                     const number = document.createElement('span');
                     button.className = 'clue-btn';
                     button.type = 'button';
+                    button.dataset.wordKey = wordKey(word);
                     number.className = 'clue-num';
                     number.textContent = `${word.number}.`;
                     button.append(number, document.createTextNode(` ${word.clue}`));
-                    button.addEventListener('click', () => focusWord(word));
+                    button.addEventListener('click', () => selectWord(word));
                     item.appendChild(button);
                     list.appendChild(item);
                 });
@@ -581,6 +587,33 @@
             const first = wordCoordinate(word, 0);
             const input = elements.grid.querySelector(`input[data-key="${cellKey(first.x, first.y)}"]`);
             if (input) input.focus();
+        }
+
+        function wordKey(word) {
+            return `${word.direction}-${word.number}`;
+        }
+
+        function selectWord(word) {
+            selectedWord = word;
+            updateSelectedClue();
+            focusWord(word);
+        }
+
+        function selectWordAtCell(key) {
+            if (!activeLayout) return;
+            const matches = activeLayout.placed.filter(word => [...word.answer].some((_, index) => {
+                const point = wordCoordinate(word, index);
+                return cellKey(point.x, point.y) === key;
+            }));
+            if (!matches.length || matches.includes(selectedWord)) return;
+            selectedWord = matches.find(word => word.direction === 'across') || matches[0];
+            updateSelectedClue();
+        }
+
+        function updateSelectedClue() {
+            elements.puzzleView.querySelectorAll('[data-word-key]').forEach(button => {
+                button.classList.toggle('selected', selectedWord && button.dataset.wordKey === wordKey(selectedWord));
+            });
         }
 
         function handleCellInput(event) {
@@ -643,22 +676,27 @@
 
         function useHint() {
             if (completed || hintsRemaining === 0) return;
-            const emptyInputs = [...elements.grid.querySelectorAll('input')].filter(input => !input.value);
-            if (!emptyInputs.length) {
-                setStatus('모든 칸을 채웠습니다. 정답을 확인해 주세요.');
+            if (!selectedWord) {
+                setStatus('힌트가 필요한 단어 설명이나 칸을 먼저 눌러 주세요.');
                 return;
             }
-            const input = emptyInputs[Math.floor(Math.random() * emptyInputs.length)];
-            const expected = activeLayout.cells.get(input.dataset.key).letter.toUpperCase();
-            input.value = expected;
-            input.classList.remove('correct', 'wrong');
-            input.classList.add('hinted');
+            if (isWordComplete(selectedWord)) {
+                setStatus('이 단어는 이미 맞혔습니다. 다른 단어를 골라 주세요.');
+                return;
+            }
+            [...selectedWord.answer].forEach((letter, index) => {
+                const point = wordCoordinate(selectedWord, index);
+                const input = elements.grid.querySelector(`input[data-key="${cellKey(point.x, point.y)}"]`);
+                if (!input) return;
+                input.value = letter.toUpperCase();
+                input.classList.remove('correct', 'wrong');
+                input.classList.add('hinted');
+            });
             hintsRemaining--;
             updateProgress();
             updateCompletedWords();
             updateHintButton();
-            setStatus(`힌트를 사용했습니다. ${hintsRemaining}회 남았습니다.`);
-            input.focus();
+            setStatus(`${selectedWord.number}번 정답을 알려드렸습니다. ${hintsRemaining}회 남았습니다.`);
         }
 
         function startTimer() {
@@ -716,7 +754,7 @@
             const elapsedSeconds = Math.max(1, Math.ceil((Date.now() - startedAt) / 1000));
             elements.timer.textContent = formatTime(elapsedSeconds);
             updateHintButton();
-            if (hintsRemaining < 3) {
+            if (hintsRemaining < 5) {
                 setStatus(`정답입니다. 힌트를 사용했으므로 순위에는 기록하지 않습니다.`, 'success');
                 return;
             }
@@ -812,7 +850,6 @@
                 input.value = '';
                 input.classList.remove('correct', 'wrong', 'hinted');
             });
-            hintsRemaining = 3;
             updateHintButton();
             updateProgress();
             updateCompletedWords();
