@@ -350,7 +350,8 @@
     function getWritingMeta() {
         const setName = String(problemSet || "");
         const lowerSetName = setName.toLowerCase();
-        const isEmail = /이메일|email/.test(lowerSetName);
+        const writingSource = `${setName}\n${currentPassage || ""}`.toLowerCase();
+        const isEmail = /이메일|e-?mail/.test(writingSource);
         let targetLevel = "Intermediate";
 
         if (/초급|beginner/.test(lowerSetName)) targetLevel = "Beginner";
