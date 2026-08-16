@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지문 빈칸 채우기 | 대성 SKY Test Center</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background: #f4f6f9; color: #2d3748; font-family: 'Malgun Gothic', sans-serif; }
+        .page { width: min(1180px, calc(100% - 28px)); margin: 18px auto; }
+        .header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+        h1 { margin: 0; color: #1a365d; font-size: 22px; line-height: 1.35; }
+        button { font: inherit; font-weight: 700; cursor: pointer; }
+        .home-btn { flex: 0 0 auto; padding: 7px 12px; border: 0; border-radius: 7px; background: #dd6b20; color: #fff; font-size: 13px; }
+        .home-btn:hover { background: #c05621; }
+        .layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr); gap: 14px; height: min(760px, calc(100svh - 92px)); min-height: 500px; }
+        .passage-box, .study-box { min-height: 0; border: 1px solid #d9e2ec; border-radius: 8px; background: #fff; box-shadow: 0 3px 10px rgba(26, 54, 93, 0.07); }
+        .passage-box { overflow-y: auto; padding: 22px 24px 28px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; line-height: 1.78; }
+        .passage-box h2 { margin: 0 0 15px; color: #1a365d; font-family: 'Malgun Gothic', sans-serif; font-size: 18px; }
+        .passage-title { margin: 0 0 18px; color: #172554; font-size: 1.16em; font-weight: 700; line-height: 1.45; }
+        .passage-paragraph { position: relative; margin: 0 0 17px; padding-left: 30px; }
+        .paragraph-number { position: absolute; left: 0; color: #2b6cb0; font-family: 'Malgun Gothic', sans-serif; font-size: 14px; font-weight: 800; }
+        .passage-box u { text-decoration-color: #718096; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+        .passage-box mark { padding: 0 2px; background: #edf2f7; color: inherit; }
+        .study-blank { display: inline; min-width: 72px; padding: 1px 5px; border: 1px solid #90cdf4; border-radius: 4px; background: #ebf8ff; color: #1a365d; font: inherit; font-family: Georgia, 'Times New Roman', serif; font-size: 0.94em; font-weight: 700; line-height: inherit; vertical-align: baseline; }
+        .study-blank:hover, .study-blank.active { border-color: #2b6cb0; background: #bee3f8; }
+        .study-blank.active { box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.18); }
+        .study-blank.correct { border-color: #68d391; background: #f0fff4; color: #276749; }
+        .study-blank.wrong { border-color: #fc8181; background: #fff5f5; color: #9b2c2c; }
+        .study-box { display: flex; flex-direction: column; padding: 24px; font-family: 'Malgun Gothic', sans-serif; }
+        .progress { margin-bottom: 18px; color: #2b6cb0; font-size: 14px; font-weight: 800; }
+        .question-title { min-height: 74px; color: #1a365d; font-size: 20px; font-weight: 800; line-height: 1.5; }
+        .question-help { margin: 7px 0 22px; color: #718096; font-size: 14px; line-height: 1.55; }
+        .answer-area { margin-top: auto; }
+        #answer-input { width: 100%; padding: 13px 14px; border: 2px solid #cbd5e0; border-radius: 7px; color: #2d3748; font: inherit; font-size: 17px; }
+        #answer-input:focus { outline: none; border-color: #2b6cb0; }
+        .submit-btn { width: 100%; margin-top: 10px; padding: 12px; border: 0; border-radius: 7px; background: #2b6cb0; color: #fff; font-size: 16px; }
+        .submit-btn:hover { background: #1a365d; }
+        .submit-btn:disabled { cursor: default; background: #a0aec0; }
+        .feedback { min-height: 70px; margin-top: 17px; font-size: 16px; font-weight: 700; line-height: 1.65; }
+        .feedback-correct { color: #276749; }
+        .feedback-wrong { color: #c53030; }
+        .correct-answer { display: block; margin-top: 9px; padding: 9px 10px; border-left: 3px solid #2f855a; background: #f0fff4; color: #276749; font-weight: 700; }
+        .finish-area { margin-top: 8px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+        .finish-score { margin-bottom: 12px; color: #1a365d; font-size: 18px; font-weight: 800; line-height: 1.5; }
+        .finish-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+        .restart-btn, .finish-home-btn { padding: 10px 8px; border-radius: 7px; font-size: 14px; }
+        .restart-btn { border: 0; background: #2b6cb0; color: #fff; }
+        .restart-btn:hover { background: #1a365d; }
+        .finish-home-btn { border: 1px solid #a0aec0; background: #fff; color: #4a5568; }
+        .finish-home-btn:hover { background: #edf2f7; }
+        .saving-message { min-height: 22px; margin: 12px 0 0; color: #718096; font-size: 13px; font-weight: 700; line-height: 1.45; }
+        .loading { margin: 18vh auto 0; color: #4a5568; text-align: center; font-size: 17px; font-weight: 700; }
+        .error-card { width: min(520px, calc(100% - 28px)); margin: 16vh auto 0; padding: 24px; border-radius: 8px; background: #fff; color: #c53030; text-align: center; box-shadow: 0 4px 13px rgba(26, 54, 93, 0.1); line-height: 1.7; }
+        .hidden { display: none !important; }
+        @media (max-width: 760px) {
+            .page { width: min(100% - 16px, 650px); margin: 10px auto 16px; }
+            .header { align-items: flex-start; margin: 0 2px 10px; }
+            h1 { font-size: 18px; }
+            .home-btn { padding: 6px 10px; }
+            .layout { display: flex; flex-direction: column; height: auto; min-height: 0; gap: 10px; }
+            .passage-box { max-height: 42svh; padding: 17px 16px 20px; font-size: 17px; line-height: 1.72; }
+            .passage-box h2 { margin-bottom: 11px; }
+            .passage-paragraph { padding-left: 25px; margin-bottom: 14px; }
+            .study-box { min-height: 330px; padding: 19px 16px; }
+            .question-title { min-height: 0; font-size: 18px; }
+            .answer-area { margin-top: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <div class="header">
+            <h1 id="page-title">지문 빈칸 채우기</h1>
+            <button type="button" class="home-btn" onclick="goHome()">홈으로</button>
+        </div>
+
+        <div id="loading" class="loading">지문을 불러오는 중입니다...</div>
+
+        <div id="study-layout" class="layout hidden">
+            <section id="passage-box" class="passage-box">
+                <h2>📖 지문</h2>
+                <div id="passage-text"></div>
+            </section>
+
+            <section class="study-box">
+                <div id="progress-text" class="progress">빈칸 0 / 0</div>
+                <div id="question-title" class="question-title">지문에서 풀고 싶은 빈칸을 눌러 주세요.</div>
+                <p id="question-help" class="question-help">아는 빈칸부터 순서와 상관없이 풀 수 있습니다.</p>
+                <div id="answer-area" class="answer-area hidden">
+                    <input id="answer-input" type="text" autocomplete="off" placeholder="정답을 입력하세요">
+                    <button id="submit-btn" class="submit-btn" type="button" onclick="checkStudyAnswer()">정답 제출</button>
+                </div>
+                <div id="feedback" class="feedback"></div>
+                <div id="finish-area" class="finish-area hidden"></div>
+                <div id="saving-message" class="saving-message"></div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
+        const MAX_BLANKS_PER_PARAGRAPH = 3;
+        const MIN_WORD_GAP = 4;
+        const MAX_WORD_GAP = 6;
+
+        let problemSet = '';
+        let studentName = '';
+        let selectedGrade = '';
+        let selectedSubject = '';
+        let passageHtml = '';
+        let passageParagraphs = [];
+        let allTargets = [];
+        let studyItems = [];
+        let activeStudyItem = null;
+        let testSaved = false;
+        let studyWordGap = 5;
+
+        window.onload = function() {
+            const params = new URLSearchParams(location.search);
+            problemSet = params.get('problem') || '';
+            studentName = params.get('student') || '';
+            selectedGrade = params.get('grade') || '';
+            selectedSubject = params.get('subject') || '';
+
+            if (!problemSet || !studentName || !hasValidMemorizeAccess()) {
+                alert('첫 화면에서 이름과 암호를 입력한 뒤 시작해 주세요.');
+                location.href = 'index.html';
+                return;
+            }
+
+            document.getElementById('page-title').innerText = `${problemSet} 빈칸 채우기`;
+            loadPassage();
+        };
+
+        function loadPassage() {
+            const loading = document.getElementById('loading');
+            const url = `${scriptURL}?action=getPassage&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
+
+            fetchJsonWithRetry(url, 3, 12000, (nextAttempt, maxAttempts) => {
+                loading.innerText = `연결이 불안정해 지문을 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
+            })
+            .then(data => {
+                passageHtml = normalizePassageTags(data && data.passage);
+                if (!passageHtml.trim()) throw new Error('Passage is missing');
+
+                passageParagraphs = splitPassageParagraphs(passageHtml);
+                allTargets = collectTargets(passageParagraphs);
+                if (!allTargets.length) {
+                    throw new Error('No underlined targets');
+                }
+
+                startNewStudy();
+                loading.classList.add('hidden');
+                document.getElementById('study-layout').classList.remove('hidden');
+            })
+            .catch(error => {
+                const message = error && error.message === 'No underlined targets'
+                    ? '이 지문에는 밑줄 친 빈칸 항목이 없습니다.<br>PassageTexts의 외울 표현에 밑줄을 친 뒤 다시 시작해 주세요.'
+                    : '지문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+                loading.className = 'error-card';
+                loading.innerHTML = message;
+            });
+        }
+
+        function fetchJsonWithRetry(url, maxAttempts, timeoutMs, onRetry) {
+            let attempt = 0;
+
+            function request() {
+                attempt++;
+                const controller = typeof AbortController === 'function' ? new AbortController() : null;
+                const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+                const options = { cache: 'no-store' };
+                if (controller) options.signal = controller.signal;
+
+                return fetch(url, options)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.json();
+                    })
+                    .finally(() => {
+                        if (timeoutId) clearTimeout(timeoutId);
+                    })
+                    .catch(error => {
+                        if (attempt >= maxAttempts) throw error;
+                        if (onRetry) onRetry(attempt + 1, maxAttempts);
+                        return new Promise(resolve => setTimeout(resolve, attempt * 900)).then(request);
+                    });
+            }
+
+            return request();
+        }
+
+        function hasValidMemorizeAccess() {
+            try {
+                const access = JSON.parse(sessionStorage.getItem('dsskyQuizAccess') || '');
+                const isFresh = Date.now() - Number(access.createdAt || 0) <= 3 * 60 * 60 * 1000;
+                return isFresh
+                    && access.learningMode === 'memorize'
+                    && access.problem === problemSet
+                    && access.student === studentName
+                    && access.grade === selectedGrade
+                    && access.subject === selectedSubject;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function normalizePassageTags(value) {
+            return String(value || '')
+                .replace(/&amp;lt;u&amp;gt;/gi, '<u>')
+                .replace(/&amp;lt;\/u&amp;gt;/gi, '</u>')
+                .replace(/&amp;lt;mark&amp;gt;/gi, '<mark>')
+                .replace(/&amp;lt;\/mark&amp;gt;/gi, '</mark>')
+                .replace(/&lt;u&gt;/gi, '<u>')
+                .replace(/&lt;\/u&gt;/gi, '</u>')
+                .replace(/&lt;mark&gt;/gi, '<mark>')
+                .replace(/&lt;\/mark&gt;/gi, '</mark>')
+                .replace(/<\/u>\s*<u>/gi, ' ');
+        }
+
+        function splitPassageParagraphs(value) {
+            return String(value || '')
+                .replace(/\r\n/g, '\n')
+                .trim()
+                .split(/\n\s*\n|\n/)
+                .map(part => part.trim())
+                .filter(Boolean);
+        }
+
+        function collectTargets(paragraphs) {
+            const targets = [];
+            let id = 0;
+
+            paragraphs.forEach((paragraph, paragraphIndex) => {
+                const matcher = /<u>([\s\S]*?)<\/u>/gi;
+                let match;
+                let targetIndex = 0;
+
+                while ((match = matcher.exec(paragraph)) !== null) {
+                    const answer = plainText(match[1]);
+                    if (!answer) continue;
+                    const beforeText = plainText(paragraph.slice(0, match.index));
+                    const startWord = countWords(beforeText);
+                    const wordCount = Math.max(countWords(answer), 1);
+
+                    targets.push({
+                        id: id++,
+                        paragraphIndex: paragraphIndex,
+                        targetIndex: targetIndex++,
+                        answer: answer,
+                        startWord: startWord,
+                        endWord: startWord + wordCount - 1,
+                        answered: false,
+                        correct: false,
+                        number: 0
+                    });
+                }
+            });
+
+            return targets;
+        }
+
+        function startNewStudy() {
+            studyWordGap = randomWholeNumber(MIN_WORD_GAP, MAX_WORD_GAP);
+            studyItems = chooseStudyTargets(allTargets).map((item, index) => ({
+                ...item,
+                number: index + 1,
+                answered: false,
+                correct: false,
+                userAnswer: ''
+            }));
+            activeStudyItem = null;
+            testSaved = false;
+            document.getElementById('answer-input').value = '';
+            document.getElementById('feedback').innerHTML = '';
+            document.getElementById('saving-message').innerText = '';
+            document.getElementById('finish-area').classList.add('hidden');
+            renderStudy();
+        }
+
+        function chooseStudyTargets(targets) {
+            const byParagraph = new Map();
+            targets.forEach(target => {
+                if (!byParagraph.has(target.paragraphIndex)) byParagraph.set(target.paragraphIndex, []);
+                byParagraph.get(target.paragraphIndex).push(target);
+            });
+
+            const paragraphIndexes = Array.from(byParagraph.keys());
+            const selected = [];
+            const goals = new Map(paragraphIndexes.map(paragraphIndex => [
+                paragraphIndex,
+                getParagraphBlankGoal(byParagraph.get(paragraphIndex).length)
+            ]));
+            let added = true;
+
+            const studyLimit = getStudyBlankLimit(paragraphIndexes.length);
+
+            while (added && selected.length < studyLimit) {
+                added = false;
+                shuffle(paragraphIndexes).forEach(paragraphIndex => {
+                    if (selected.length >= studyLimit) return;
+
+                    const selectedInParagraph = selected.filter(item => item.paragraphIndex === paragraphIndex);
+                    if (selectedInParagraph.length >= goals.get(paragraphIndex)) return;
+
+                    const candidate = shuffle(byParagraph.get(paragraphIndex)).find(item =>
+                        !selected.some(selectedItem => selectedItem.id === item.id)
+                        && isFarEnough(item, selectedInParagraph)
+                    );
+                    if (candidate) {
+                        selected.push(candidate);
+                        added = true;
+                    }
+                });
+            }
+
+            return selected;
+        }
+
+        function getParagraphBlankGoal(targetCount) {
+            if (targetCount >= 6) return 3;
+            if (targetCount >= 3) return 2;
+            return 1;
+        }
+
+        function getStudyBlankLimit(paragraphCount) {
+            if (paragraphCount <= 1) return 3;
+            if (paragraphCount <= 2) return 5;
+            if (paragraphCount <= 4) return 8;
+            if (paragraphCount <= 6) return 12;
+            return 16;
+        }
+
+        function isFarEnough(candidate, selectedInParagraph) {
+            return selectedInParagraph.every(selected =>
+                candidate.startWord > selected.endWord + studyWordGap
+                || candidate.endWord + studyWordGap < selected.startWord
+            );
+        }
+
+        function randomWholeNumber(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function shuffle(items) {
+            const copy = items.slice();
+            for (let index = copy.length - 1; index > 0; index--) {
+                const swapIndex = Math.floor(Math.random() * (index + 1));
+                [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+            }
+            return copy;
+        }
+
+        function renderStudy() {
+            const answeredCount = studyItems.filter(item => item.answered).length;
+            document.getElementById('progress-text').innerText = `빈칸 ${answeredCount} / ${studyItems.length}`;
+            renderStudyPassage();
+            renderAnswerPanel();
+        }
+
+        function renderStudyPassage() {
+            const passageBox = document.getElementById('passage-box');
+            const passageText = document.getElementById('passage-text');
+            const savedScrollTop = passageBox.scrollTop;
+            let paragraphNumber = 1;
+
+            passageText.innerHTML = '';
+            passageParagraphs.forEach((paragraph, paragraphIndex) => {
+                if (isPassageTitle(paragraph, paragraphIndex, passageParagraphs.length)) {
+                    const title = document.createElement('div');
+                    title.className = 'passage-title';
+                    title.innerHTML = formatStudyMarkup(paragraph.replace(/^#\s*/, ''), paragraphIndex);
+                    passageText.appendChild(title);
+                    paragraphNumber = 1;
+                    return;
+                }
+
+                const row = document.createElement('p');
+                row.className = 'passage-paragraph';
+                row.innerHTML = `<span class="paragraph-number">${paragraphNumber}.</span>${formatStudyMarkup(paragraph, paragraphIndex)}`;
+                passageText.appendChild(row);
+                paragraphNumber++;
+            });
+
+            passageBox.scrollTop = savedScrollTop;
+        }
+
+        function formatStudyMarkup(paragraph, paragraphIndex) {
+            let localTargetIndex = 0;
+            const replacements = [];
+            const tokenized = String(paragraph).replace(/<u>([\s\S]*?)<\/u>/gi, (match, inner) => {
+                const target = allTargets.find(item => item.paragraphIndex === paragraphIndex && item.targetIndex === localTargetIndex++);
+                const studyItem = target && studyItems.find(item => item.id === target.id);
+                if (!studyItem) return match;
+
+                const stateClass = studyItem.answered ? (studyItem.correct ? ' correct' : ' wrong') : '';
+                const activeClass = activeStudyItem && activeStudyItem.id === studyItem.id ? ' active' : '';
+                const token = `%%STUDY_BLANK_${studyItem.id}%%`;
+                replacements.push({
+                    token: token,
+                    html: `<button type="button" class="study-blank${stateClass}${activeClass}" onclick="selectStudyBlank(${studyItem.id})">${studyItem.number}번 빈칸</button>`
+                });
+                return token;
+            });
+
+            let markup = formatPassageMarkup(tokenized);
+            replacements.forEach(replacement => {
+                markup = markup.replace(replacement.token, replacement.html);
+            });
+            return markup;
+        }
+
+        function renderAnswerPanel() {
+            const answerArea = document.getElementById('answer-area');
+            const input = document.getElementById('answer-input');
+            const submitButton = document.getElementById('submit-btn');
+            const title = document.getElementById('question-title');
+            const help = document.getElementById('question-help');
+
+            if (isStudyComplete()) {
+                answerArea.classList.add('hidden');
+                title.innerText = '모든 빈칸을 풀었습니다.';
+                help.innerText = '다시 풀면 같은 지문에서 다른 밑줄 부분이 빈칸으로 나옵니다.';
+                showStudyCompletion();
+                return;
+            }
+
+            document.getElementById('finish-area').classList.add('hidden');
+            if (!activeStudyItem) {
+                answerArea.classList.add('hidden');
+                title.innerText = '지문에서 풀고 싶은 빈칸을 눌러 주세요.';
+                help.innerText = '아는 빈칸부터 순서와 상관없이 풀 수 있습니다.';
+                return;
+            }
+
+            answerArea.classList.remove('hidden');
+            title.innerText = `${activeStudyItem.number}번 빈칸`;
+            help.innerText = activeStudyItem.answered
+                ? '지문에서 다른 빈칸을 눌러 계속 풀어 주세요.'
+                : '띄어쓰기와 대소문자는 달라도 맞게 처리됩니다.';
+            input.value = activeStudyItem.userAnswer || '';
+            input.disabled = activeStudyItem.answered;
+            submitButton.disabled = activeStudyItem.answered;
+            if (!activeStudyItem.answered) input.focus();
+        }
+
+        function selectStudyBlank(id) {
+            const item = studyItems.find(studyItem => studyItem.id === id);
+            if (!item) return;
+            activeStudyItem = item;
+            document.getElementById('feedback').innerHTML = item.answered ? getAnswerFeedback(item) : '';
+            renderStudy();
+        }
+
+        function checkStudyAnswer() {
+            if (!activeStudyItem || activeStudyItem.answered) return;
+
+            const input = document.getElementById('answer-input');
+            const answer = input.value.trim();
+            if (!answer) {
+                document.getElementById('feedback').innerHTML = '<span class="feedback-wrong">정답을 입력한 뒤 제출해 주세요.</span>';
+                input.focus();
+                return;
+            }
+
+            activeStudyItem.userAnswer = answer;
+            activeStudyItem.answered = true;
+            activeStudyItem.correct = normalizeAnswer(answer) === normalizeAnswer(activeStudyItem.answer);
+            document.getElementById('feedback').innerHTML = getAnswerFeedback(activeStudyItem);
+            renderStudy();
+        }
+
+        function getAnswerFeedback(item) {
+            if (item.correct) {
+                return '<span class="feedback-correct">정답입니다.</span>';
+            }
+
+            return `<span class="feedback-wrong">오답입니다.</span><span class="correct-answer">정답: ${escapeHtml(item.answer)}</span>`;
+        }
+
+        function isStudyComplete() {
+            return studyItems.length > 0 && studyItems.every(item => item.answered);
+        }
+
+        function showStudyCompletion() {
+            const correctCount = studyItems.filter(item => item.correct).length;
+            const wrongCount = studyItems.length - correctCount;
+            const finishArea = document.getElementById('finish-area');
+            finishArea.classList.remove('hidden');
+            finishArea.innerHTML = `
+                <div class="finish-score">결과: ${studyItems.length}개 중 ${correctCount}개 정답, ${wrongCount}개 오답</div>
+                <div class="finish-actions">
+                    <button type="button" class="restart-btn" onclick="startNewStudy()">새 빈칸으로 다시 하기</button>
+                    <button type="button" class="finish-home-btn" onclick="goHome()">홈으로</button>
+                </div>
+            `;
+            saveStudyCompletion(correctCount, wrongCount);
+        }
+
+        function saveStudyCompletion(correctCount, wrongCount) {
+            if (testSaved) return;
+            testSaved = true;
+            const formData = new URLSearchParams({
+                action: 'saveTest',
+                studentName: studentName,
+                grade: selectedGrade,
+                subject: selectedSubject,
+                problemSet: `${problemSet} 빈칸 채우기`,
+                questionCount: String(studyItems.length),
+                correctCount: String(correctCount),
+                wrongCount: String(wrongCount),
+                score: `${correctCount} / ${studyItems.length}`,
+                completed: 'TRUE'
+            });
+
+            fetch(scriptURL, {
+                method: 'POST',
+                keepalive: true,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            })
+            .then(() => {
+                document.getElementById('saving-message').innerText = '완료 기록이 저장되었습니다.';
+                document.getElementById('saving-message').style.color = '#276749';
+            })
+            .catch(() => {
+                testSaved = false;
+                document.getElementById('saving-message').innerText = '완료 기록 저장에 실패했습니다. 인터넷 연결을 확인해 주세요.';
+                document.getElementById('saving-message').style.color = '#c53030';
+            });
+        }
+
+        function normalizeAnswer(value) {
+            return plainText(value)
+                .toLowerCase()
+                .replace(/[“”"'.,!?;:()[\]{}]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function plainText(value) {
+            const holder = document.createElement('textarea');
+            holder.innerHTML = String(value || '').replace(/<[^>]*>/g, ' ');
+            return holder.value.replace(/\s+/g, ' ').trim();
+        }
+
+        function countWords(value) {
+            const matches = String(value || '').match(/[A-Za-z0-9]+(?:['’%-][A-Za-z0-9]+)*/g);
+            return matches ? matches.length : 0;
+        }
+
+        function isPassageTitle(paragraph, index, totalCount) {
+            return paragraph.startsWith('#') || (index === 0 && totalCount > 1);
+        }
+
+        function formatPassageMarkup(text) {
+            return escapeHtml(text)
+                .replace(/&amp;#0*39;/gi, "'")
+                .replace(/&amp;apos;/gi, "'")
+                .replace(/&amp;quot;/gi, '"')
+                .replace(/&amp;lt;u&amp;gt;/gi, '<u>')
+                .replace(/&amp;lt;\/u&amp;gt;/gi, '</u>')
+                .replace(/&amp;lt;mark&amp;gt;/gi, '<mark>')
+                .replace(/&amp;lt;\/mark&amp;gt;/gi, '</mark>')
+                .replace(/&lt;u&gt;/gi, '<u>')
+                .replace(/&lt;\/u&gt;/gi, '</u>')
+                .replace(/&lt;mark&gt;/gi, '<mark>')
+                .replace(/&lt;\/mark&gt;/gi, '</mark>');
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function goHome() {
+            if (!isStudyComplete() && !confirm('진행 중인 빈칸 채우기를 끝내고 첫 화면으로 돌아갈까요?')) return;
+            location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

@@ -204,11 +204,11 @@
 
         <div id="step5" class="hidden">
             <h2>접속 암호</h2>
-            <p id="problem-title">선택한 문제: -</p>
+            <p id="problem-title">선택한 학습: -</p>
             <input type="text" id="student-name" placeholder="학생 이름">
             <input type="password" id="password-input" placeholder="4자리 암호" maxlength="4">
-            <button class="full-width" style="width: 100%; margin-bottom: 10px;" onclick="checkPassword()">문제 풀기 시작</button>
-            <button class="back-btn full-width" style="width: 100%;" onclick="goBack('step5', 'step4')">돌아가기</button>
+            <button id="start-learning-btn" class="full-width" style="width: 100%; margin-bottom: 10px;" onclick="checkPassword()">문제 풀기 시작</button>
+            <button class="back-btn full-width" style="width: 100%;" onclick="goBackFromPassword()">돌아가기</button>
         </div>
     </div>
 
@@ -222,6 +222,7 @@
         let selectedGrade = "";
         let selectedSubject = "";
         let selectedProblem = "";
+        let selectedLearningMode = "quiz";
         let step3BackTarget = "step2";
 
         const gradeGroups = [
@@ -369,15 +370,36 @@
             
             let problems = db[selectedGrade][subject];
             for (let i = 0; i < problems.length; i++) {
-                problemDiv.innerHTML += `<button onclick="selectProblem('${problems[i]}')">${problems[i]}</button>`;
+                const problem = problems[i];
+                if (isSchoolExamGrade(selectedGrade)) {
+                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'quiz')">${problem} 문제 풀기</button>`;
+                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'memorize')">${problem} 빈칸 채우기</button>`;
+                } else {
+                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'quiz')">${problem}</button>`;
+                }
             }
             changeScreen('step3', 'step4');
         }
 
-        function selectProblem(problem) {
+        function selectProblem(problem, mode) {
             selectedProblem = problem;
-            document.getElementById('problem-title').innerText = "선택한 문제: " + problem;
-            changeScreen('step4', 'step5');
+            selectedLearningMode = mode || 'quiz';
+            showPasswordScreen('step4');
+        }
+
+        function isSchoolExamGrade(grade) {
+            return ["중1", "중2", "중3", "고1", "고2", "고3"].includes(grade);
+        }
+
+        function showPasswordScreen(fromStep) {
+            const learningName = selectedLearningMode === 'memorize'
+                ? `${selectedProblem} 빈칸 채우기`
+                : `${selectedProblem} 문제 풀기`;
+            document.getElementById('problem-title').innerText = "선택한 학습: " + learningName;
+            document.getElementById('start-learning-btn').innerText = selectedLearningMode === 'memorize'
+                ? "빈칸 채우기 시작"
+                : "문제 풀기 시작";
+            changeScreen(fromStep, 'step5');
         }
 
         function changeScreen(hideId, showId) {
@@ -392,6 +414,10 @@
 
         function goBackFromStep3() {
             goBack('step3', step3BackTarget || 'step2');
+        }
+
+        function goBackFromPassword() {
+            goBack('step5', 'step4');
         }
 
         function checkPassword() {
@@ -418,9 +444,10 @@
                     student: studentName,
                     grade: selectedGrade,
                     subject: selectedSubject,
+                    learningMode: selectedLearningMode,
                     createdAt: Date.now()
                 }));
-                window.location.href = "quiz.html?" + params.toString();
+                window.location.href = (selectedLearningMode === 'memorize' ? "memorize.html?" : "quiz.html?") + params.toString();
             } else {
                 alert("암호가 틀렸습니다. 다시 확인해 주세요!");
             }

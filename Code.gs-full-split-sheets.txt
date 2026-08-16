@@ -1263,6 +1263,33 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  // 지문 빈칸 채우기: 문제 시트는 읽지 않고 선택한 지문만 가져오기
+  if (e.parameter.action === "getPassage") {
+    var passageSet = String(e.parameter.set || "");
+    var passageGrade = normalizeGradeName_(e.parameter.grade);
+    var passageCache = CacheService.getScriptCache();
+    var passageCacheKey = "passage:" + passageGrade + ":" + passageSet;
+    var cachedPassage = passageCache.get(passageCacheKey);
+
+    if (cachedPassage) {
+      return ContentService
+        .createTextOutput(cachedPassage)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var passageJson = JSON.stringify({
+      passage: getQuizPassage_(SpreadsheetApp.getActiveSpreadsheet(), passageSet, passageGrade)
+    });
+
+    if (passageJson.length < 90000) {
+      passageCache.put(passageCacheKey, passageJson, 300);
+    }
+
+    return ContentService
+      .createTextOutput(passageJson)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // 첫 화면 목록은 Passages에서 가져오기
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Passages");
   var dataList = [];
