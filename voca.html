@@ -43,6 +43,7 @@
         .home-btn { width: auto; min-width: 110px; padding: 10px 14px; font-size: 15px; background-color: #dd6b20; margin-bottom: 15px; }
         .home-btn:hover { background-color: #c05621; }
         .intro-home-row { text-align: left; margin-bottom: 6px; }
+        .resume-message { margin: -4px 0 13px; color: #2b6cb0; font-size: 14px; font-weight: bold; text-align: left; }
 
         .wrong-list { margin-top: 20px; text-align: left; background: #fff5f5; padding: 20px; border-radius: 10px; border: 1px solid #feb2b2; }
         .wrong-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #feb2b2; }
@@ -86,6 +87,7 @@
 
     <div id="quiz-screen" class="hidden">
         <button class="home-btn" onclick="goHome()">홈으로</button>
+        <p id="resume-message" class="resume-message hidden">이전 단어 테스트를 이어서 풀고 있습니다.</p>
         <div class="progress" id="progress-text">1 / ?</div>
         <div class="question" id="question-text">한국어 뜻</div>
         <div id="options-area"></div>
@@ -113,6 +115,7 @@
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
+    const VOCA_SESSION_PREFIX = 'dsskyVocaTestSession_v1:';
     
     let allVocaData = [];
     let currentQuizData = []; 
@@ -122,6 +125,8 @@
     let selectedDay = "";
     let selectedRange = "";
     let subjectType = "";
+    let autoAdvanceTimer = null;
+    let testSessionActive = false;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -140,6 +145,8 @@
         document.getElementById('title-text').innerText = `${getSubjectDisplayName()} 단어 테스트`;
         document.getElementById('day-label').innerHTML =
             isTextbookSubject() ? '<b>📚 학습할 과목 선택</b>' : '<b>📅 학습할 Day 선택</b>';
+
+        if (restoreSavedTest()) return;
 
         fetch(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&t=${new Date().getTime()}`)
         .then(res => res.json())
@@ -160,6 +167,76 @@
             }
         });
     };
+
+    window.addEventListener('pagehide', saveTestProgress);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') saveTestProgress();
+    });
+
+    function getVocaSessionKey() {
+        return `${VOCA_SESSION_PREFIX}${encodeURIComponent(subjectType)}`;
+    }
+
+    function saveTestProgress() {
+        if (!testSessionActive || !currentQuizData.length || !studentName || !selectedDay) return;
+
+        try {
+            localStorage.setItem(getVocaSessionKey(), JSON.stringify({
+                version: 1,
+                subjectType,
+                studentName,
+                selectedDay,
+                selectedRange,
+                currentIndex,
+                currentQuizData,
+                savedAt: Date.now()
+            }));
+        } catch (error) {
+            // The test still works when private browsing blocks local storage.
+        }
+    }
+
+    function restoreSavedTest() {
+        let saved;
+        try {
+            saved = JSON.parse(localStorage.getItem(getVocaSessionKey()) || 'null');
+        } catch (error) {
+            clearSavedTest();
+            return false;
+        }
+
+        const validQuiz = saved && saved.version === 1 && saved.subjectType === subjectType &&
+            Array.isArray(saved.currentQuizData) && saved.currentQuizData.length > 0 &&
+            saved.currentQuizData.every(item => item && typeof item.question === 'string' &&
+                typeof item.answer === 'string' && Array.isArray(item.options));
+
+        if (!validQuiz) return false;
+
+        studentName = String(saved.studentName || '').trim();
+        selectedDay = String(saved.selectedDay || '').trim();
+        selectedRange = String(saved.selectedRange || '').trim();
+        if (!studentName || !selectedDay) {
+            clearSavedTest();
+            return false;
+        }
+
+        currentQuizData = saved.currentQuizData;
+        currentIndex = Math.max(0, Math.min(Number(saved.currentIndex) || 0, currentQuizData.length - 1));
+        testSessionActive = true;
+        document.getElementById('intro-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        document.getElementById('resume-message').classList.remove('hidden');
+        renderQuiz();
+        return true;
+    }
+
+    function clearSavedTest() {
+        try {
+            localStorage.removeItem(getVocaSessionKey());
+        } catch (error) {
+            // Nothing else is needed when local storage is unavailable.
+        }
+    }
 
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -219,6 +296,9 @@
             return;
         }
 
+        clearSavedTest();
+        document.getElementById('resume-message').classList.add('hidden');
+
         // 🌟 선택한 범위 안에서 단어 순서를 매번 랜덤으로 섞어줍니다!
         rawData = shuffleArray(rawData);
 
@@ -243,7 +323,9 @@
         document.getElementById('quiz-screen').classList.remove('hidden');
         
         currentIndex = 0;
+        testSessionActive = true;
         renderQuiz();
+        saveTestProgress();
     }
 
     async function checkVocaPassword(password, day) {
@@ -309,9 +391,11 @@
         currentQuizData[currentIndex].isCorrect = isCorrect;
         
         renderOptions(); 
+        saveTestProgress();
 
         if(currentIndex < currentQuizData.length - 1) {
-            setTimeout(() => {
+            clearTimeout(autoAdvanceTimer);
+            autoAdvanceTimer = setTimeout(() => {
                 nextQuestion();
             }, 300);
         }
@@ -321,6 +405,7 @@
         if (currentIndex > 0) {
             currentIndex--;
             renderQuiz();
+            saveTestProgress();
         }
     }
 
@@ -328,18 +413,26 @@
         if (currentIndex < currentQuizData.length - 1) {
             currentIndex++;
             renderQuiz();
+            saveTestProgress();
         }
     }
 
     function goHome() {
         if (confirm("진행 중인 테스트를 끝내고 첫 화면으로 돌아갈까요?")) {
+            clearTimeout(autoAdvanceTimer);
+            testSessionActive = false;
+            clearSavedTest();
             location.href = "index.html";
         }
     }
 
     function endTest() {
+        clearTimeout(autoAdvanceTimer);
+        testSessionActive = false;
         let finalScore = currentQuizData.filter(q => q.isCorrect).length;
         let wrongAnswers = currentQuizData.filter(q => !q.isCorrect);
+
+        clearSavedTest();
 
         document.getElementById('quiz-screen').classList.add('hidden');
         document.getElementById('result-screen').classList.remove('hidden');
