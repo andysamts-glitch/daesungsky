@@ -116,6 +116,8 @@
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
     const VOCA_SESSION_PREFIX = 'dsskyVocaTestSession_v1:';
+    const STUDENT_NAME_STORAGE_KEY = 'dsskyStudentName_v1';
+    const PASSWORD_STORAGE_PREFIX = 'dsskyPassword_v1:';
     
     let allVocaData = [];
     let currentQuizData = []; 
@@ -145,6 +147,8 @@
         document.getElementById('title-text').innerText = `${getSubjectDisplayName()} 단어 테스트`;
         document.getElementById('day-label').innerHTML =
             isTextbookSubject() ? '<b>📚 학습할 과목 선택</b>' : '<b>📅 학습할 Day 선택</b>';
+        document.getElementById('student-name').value = getSavedStudentName();
+        document.getElementById('day-select').addEventListener('change', fillSavedPassword);
 
         if (restoreSavedTest()) return;
 
@@ -164,6 +168,8 @@
             if(days.length === 0) {
                 daySelect.innerHTML = "<option>등록된 단어가 없습니다.</option>";
                 document.getElementById('start-btn').disabled = true;
+            } else {
+                fillSavedPassword();
             }
         });
     };
@@ -175,6 +181,46 @@
 
     function getVocaSessionKey() {
         return `${VOCA_SESSION_PREFIX}${encodeURIComponent(subjectType)}`;
+    }
+
+    function getSavedStudentName() {
+        try {
+            return String(localStorage.getItem(STUDENT_NAME_STORAGE_KEY) || '').trim();
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function saveStudentName(name) {
+        try {
+            localStorage.setItem(STUDENT_NAME_STORAGE_KEY, String(name || '').trim());
+        } catch (error) {
+            // The test still works when private browsing blocks local storage.
+        }
+    }
+
+    function getVocaPasswordStorageKey() {
+        const selectedValue = String(document.getElementById('day-select').value || '').trim();
+        const gradeMatch = selectedValue.match(/^(중[1-3]|고[1-3])/);
+        const passwordGroup = isTextbookSubject() && gradeMatch ? gradeMatch[1] : subjectType;
+        return `${PASSWORD_STORAGE_PREFIX}${encodeURIComponent(`voca:${subjectType}:${passwordGroup}`)}`;
+    }
+
+    function fillSavedPassword() {
+        try {
+            const savedPassword = localStorage.getItem(getVocaPasswordStorageKey());
+            if (savedPassword) document.getElementById('secret-pw').value = savedPassword;
+        } catch (error) {
+            // The test still works when private browsing blocks local storage.
+        }
+    }
+
+    function saveVocaPassword(password) {
+        try {
+            localStorage.setItem(getVocaPasswordStorageKey(), String(password || ''));
+        } catch (error) {
+            // The test still works when private browsing blocks local storage.
+        }
     }
 
     function saveTestProgress() {
@@ -275,6 +321,9 @@
             document.getElementById('secret-pw').focus();
             return; 
         }
+
+        saveStudentName(studentName);
+        saveVocaPassword(enteredPw);
 
         let dayWords = allVocaData.filter(item => item.day === selectedDay);
         let midPoint = Math.ceil(dayWords.length / 2); 

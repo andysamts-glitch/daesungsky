@@ -420,7 +420,10 @@
 
         let activePuzzle = null;
         let activeLayout = null;
-        let playerName = localStorage.getItem('crosswordPlayerName') || '';
+        const STUDENT_NAME_STORAGE_KEY = 'dsskyStudentName_v1';
+        let playerName = localStorage.getItem(STUDENT_NAME_STORAGE_KEY)
+            || localStorage.getItem('crosswordPlayerName')
+            || '';
         let startedAt = 0;
         let timerId = null;
         let completed = false;
@@ -594,6 +597,7 @@
                 elements.studentName.focus();
                 return;
             }
+            localStorage.setItem(STUDENT_NAME_STORAGE_KEY, playerName);
             localStorage.setItem('crosswordPlayerName', playerName);
             activePuzzle = PUZZLES.find(puzzle => puzzle.id === id);
             if (!activePuzzle) return;

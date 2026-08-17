@@ -209,6 +209,7 @@
     <script>
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
         const refreshMs = 20000;
+        const STUDENT_NAME_STORAGE_KEY = 'dsskyStudentName_v1';
 
         let studentName = '';
         let gameState = null;
@@ -244,7 +245,9 @@
         };
 
         window.addEventListener('load', () => {
-            const savedName = localStorage.getItem('wordRelayStudentName') || '';
+            const savedName = localStorage.getItem(STUDENT_NAME_STORAGE_KEY)
+                || localStorage.getItem('wordRelayStudentName')
+                || '';
             elements.studentName.value = savedName;
             elements.startBtn.addEventListener('click', startGame);
             elements.studentName.addEventListener('keydown', event => {
@@ -266,6 +269,7 @@
             }
 
             studentName = name;
+            localStorage.setItem(STUDENT_NAME_STORAGE_KEY, studentName);
             localStorage.setItem('wordRelayStudentName', studentName);
             elements.playerName.textContent = studentName;
             elements.startScreen.classList.add('hidden');

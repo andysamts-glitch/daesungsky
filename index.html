@@ -213,8 +213,10 @@
     </div>
 
     <script>
-        // 
+        //
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
+        const STUDENT_NAME_STORAGE_KEY = 'dsskyStudentName_v1';
+        const PASSWORD_STORAGE_PREFIX = 'dsskyPassword_v1:';
 
         let db = {};
         let selectedCategory = "";
@@ -233,8 +235,45 @@
         ];
 
         window.onload = function() {
+            document.getElementById('student-name').value = getSavedStudentName();
             const categoryDiv = document.getElementById('category-btns');
             loadCategoryData(categoryDiv);
+        }
+
+        function getSavedStudentName() {
+            try {
+                return String(localStorage.getItem(STUDENT_NAME_STORAGE_KEY) || '').trim();
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function saveStudentName(name) {
+            try {
+                localStorage.setItem(STUDENT_NAME_STORAGE_KEY, String(name || '').trim());
+            } catch (error) {
+                // The test still works when private browsing blocks local storage.
+            }
+        }
+
+        function getPasswordStorageKey() {
+            return `${PASSWORD_STORAGE_PREFIX}${encodeURIComponent(`${selectedGrade}:${selectedSubject}`)}`;
+        }
+
+        function getSavedPassword() {
+            try {
+                return String(localStorage.getItem(getPasswordStorageKey()) || '');
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function savePassword(password) {
+            try {
+                localStorage.setItem(getPasswordStorageKey(), String(password || ''));
+            } catch (error) {
+                // The test still works when private browsing blocks local storage.
+            }
         }
 
         function loadCategoryData(categoryDiv) {
@@ -429,6 +468,7 @@
             document.getElementById('start-learning-btn').innerText = selectedLearningMode === 'memorize'
                 ? "빈칸 채우기 시작"
                 : "문제 풀기 시작";
+            document.getElementById('password-input').value = getSavedPassword();
             changeScreen(fromStep, 'step5');
         }
 
@@ -462,6 +502,8 @@
             }
 
             if(pwd === realPassword) {
+                saveStudentName(studentName);
+                savePassword(pwd);
                 const params = new URLSearchParams({
                     problem: selectedProblem,
                     student: studentName,
