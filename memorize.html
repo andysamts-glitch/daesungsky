@@ -311,7 +311,28 @@
                 });
             }
 
-            return selected;
+            return keepReadableGaps(selected);
+        }
+
+        function keepReadableGaps(items) {
+            const kept = [];
+            const byParagraph = new Map();
+
+            items.forEach(item => {
+                if (!byParagraph.has(item.paragraphIndex)) byParagraph.set(item.paragraphIndex, []);
+                byParagraph.get(item.paragraphIndex).push(item);
+            });
+
+            byParagraph.forEach(paragraphItems => {
+                paragraphItems
+                    .sort((first, second) => first.startWord - second.startWord)
+                    .forEach(item => {
+                        const previous = kept.filter(keptItem => keptItem.paragraphIndex === item.paragraphIndex);
+                        if (isFarEnough(item, previous)) kept.push(item);
+                    });
+            });
+
+            return kept;
         }
 
         function getParagraphBlankGoal(targetCount) {
@@ -536,7 +557,9 @@
         }
 
         function getBlankPlaceholder(answer) {
-            return String(answer || '').replace(/[A-Za-z0-9]/g, '_');
+            const letterCount = (String(answer || '').match(/[A-Za-z0-9]/g) || []).length;
+            const blankLength = Math.min(Math.max(letterCount, 7), 18);
+            return '_'.repeat(blankLength);
         }
 
         function plainText(value) {
