@@ -331,7 +331,7 @@ function playWordChain_(e) {
     state.usedWords = nextUsedWords;
     state.playerCounts = nextPlayerCounts;
 
-    clearWordChainWeeklyLeaderboardCache_();
+    clearWordChainMonthlyLeaderboardCache_();
 
     var payload = buildWordChainPayload_(ss, state, playerName);
     payload.acceptedWord = entry.word;
@@ -646,7 +646,7 @@ function buildWordChainPayload_(ss, state, playerName) {
     myCount: getWordChainPlayerCount_(state.playerCounts, playerName),
     lastPlayerName: state.lastPlayer ? maskStudentName_(state.lastPlayer) : "",
     hints: getWordChainHints_(ss, state.requiredLetter, usedWords),
-    weeklyLeaderboard: getWordChainWeeklyLeaderboard_(ss, WORD_CHAIN_LEADERBOARD_LIMIT),
+    monthlyLeaderboard: getWordChainMonthlyLeaderboard_(ss, WORD_CHAIN_LEADERBOARD_LIMIT),
     recentEntries: getWordChainRecentEntries_(ss, state.dateKey, 10)
   };
 }
@@ -698,10 +698,10 @@ function getWordChainRecentEntries_(ss, dateKey, limit) {
   return entries;
 }
 
-function getWordChainWeeklyLeaderboard_(ss, limit) {
-  var weekStartKey = getWordChainWeekStartKey_();
+function getWordChainMonthlyLeaderboard_(ss, limit) {
+  var monthStartKey = getWordChainMonthStartKey_();
   var cache = CacheService.getScriptCache();
-  var cacheKey = "wordChainWeeklyLeaderboard_" + weekStartKey + "_" + limit;
+  var cacheKey = "wordChainMonthlyLeaderboard_" + monthStartKey + "_" + limit;
   var cached = cache.get(cacheKey);
   if (cached) {
     try {
@@ -721,7 +721,7 @@ function getWordChainWeeklyLeaderboard_(ss, limit) {
 
   for (var i = rows.length - 1; i >= 0; i--) {
     var entryDateKey = wordChainDateKeyFromValue_(rows[i][0]);
-    if (entryDateKey < weekStartKey) break;
+    if (entryDateKey < monthStartKey) break;
     if (entryDateKey > todayKey) continue;
 
     var name = normalizeWordChainPlayerName_(rows[i][3]);
@@ -749,18 +749,15 @@ function getWordChainWeeklyLeaderboard_(ss, limit) {
   return result;
 }
 
-function clearWordChainWeeklyLeaderboardCache_() {
+function clearWordChainMonthlyLeaderboardCache_() {
   var cache = CacheService.getScriptCache();
-  var weekStartKey = getWordChainWeekStartKey_();
-  cache.remove("wordChainWeeklyLeaderboard_" + weekStartKey + "_" + WORD_CHAIN_LEADERBOARD_LIMIT);
+  var monthStartKey = getWordChainMonthStartKey_();
+  cache.remove("wordChainMonthlyLeaderboard_" + monthStartKey + "_" + WORD_CHAIN_LEADERBOARD_LIMIT);
 }
 
-function getWordChainWeekStartKey_() {
+function getWordChainMonthStartKey_() {
   var parts = getWordChainDateKey_().split("-");
-  var date = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])));
-  var daysSinceMonday = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - daysSinceMonday);
-  return date.toISOString().slice(0, 10);
+  return parts[0] + "-" + parts[1] + "-01";
 }
 
 function maskWordChainLeaderboardName_(value) {

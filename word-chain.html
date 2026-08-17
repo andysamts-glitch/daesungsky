@@ -188,9 +188,9 @@
                 <ul id="related-list" class="related-list"></ul>
             </section>
 
-            <section class="leaderboard" aria-label="이번 주 참여 순위">
+            <section class="leaderboard" aria-label="이번 달 참여 순위">
                 <div class="leaderboard-header">
-                    <h2>이번 주 참여 순위</h2>
+                    <h2>이번 달 참여 순위</h2>
                     <span>TOP 5</span>
                 </div>
                 <ol id="leaderboard-list" class="leaderboard-list"></ol>
@@ -329,7 +329,7 @@
             elements.entryLabel.textContent = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 4글자 이상 영어 단어`;
             elements.wordInput.placeholder = `${(data.requiredLetter || '?').toUpperCase()}로 시작하는 4글자 이상 단어`;
             elements.hintBtn.disabled = !(data.hints && data.hints.length);
-            renderLeaderboard(data.weeklyLeaderboard || []);
+            renderLeaderboard(data.monthlyLeaderboard || []);
             renderHistory(data.recentEntries || []);
         }
 
@@ -339,7 +339,7 @@
             if (!entries.length) {
                 const empty = document.createElement('li');
                 empty.className = 'empty-leaderboard';
-                empty.textContent = '이번 주 첫 참여자가 되어 보세요.';
+                empty.textContent = '이번 달 첫 참여자가 되어 보세요.';
                 elements.leaderboardList.appendChild(empty);
                 return;
             }
