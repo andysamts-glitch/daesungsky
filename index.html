@@ -216,8 +216,9 @@
         // 
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
 
-        let db = {}; 
+        let db = {};
         let passwordDB = {}; 
+        let learningTypeDB = {};
         let selectedCategory = "";
         let selectedGrade = "";
         let selectedSubject = "";
@@ -257,6 +258,7 @@
                     
                     const key = `${item.grade}-${item.subject}-${item.set}`;
                     passwordDB[key] = item.password;
+                    learningTypeDB[key] = String(item.learningType || "").trim();
                 });
 
                 renderCategoryButtons();
@@ -371,7 +373,10 @@
             let problems = db[selectedGrade][subject];
             for (let i = 0; i < problems.length; i++) {
                 const problem = problems[i];
-                if (isSchoolExamGrade(selectedGrade)) {
+                const learningType = getLearningType(problem);
+                if (isSchoolExamGrade(selectedGrade) && learningType === '빈칸') {
+                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'memorize')">${problem} 빈칸 채우기</button>`;
+                } else if (isSchoolExamGrade(selectedGrade) && learningType === '둘다') {
                     problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'quiz')">${problem} 문제 풀기</button>`;
                     problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'memorize')">${problem} 빈칸 채우기</button>`;
                 } else {
@@ -389,6 +394,14 @@
 
         function isSchoolExamGrade(grade) {
             return ["중1", "중2", "중3", "고1", "고2", "고3"].includes(grade);
+        }
+
+        function getLearningType(problem) {
+            const key = `${selectedGrade}-${selectedSubject}-${problem}`;
+            const value = String(learningTypeDB[key] || '').trim().toLowerCase();
+            if (value === '빈칸' || value === '암기' || value === 'memorize') return '빈칸';
+            if (value === '둘다' || value === 'both') return '둘다';
+            return '문제';
         }
 
         function showPasswordScreen(fromStep) {

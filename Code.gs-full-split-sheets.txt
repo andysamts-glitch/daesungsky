@@ -67,7 +67,8 @@ function doPost(e) {
       e.parameter.set,
       e.parameter.password,
       "",
-      new Date()
+      new Date(),
+      e.parameter.learningType || ""
     ]);
     CacheService.getScriptCache().remove("writingSetPasswordMap_v1");
   }
@@ -1302,7 +1303,8 @@ function doGet(e) {
           grade: normalizeGradeName_(row[0]),
           subject: String(row[1]),
           set: String(row[2]),
-          password: String(row[3])
+          password: String(row[3]),
+          learningType: String(row[6] || "")
         });
       }
     }
