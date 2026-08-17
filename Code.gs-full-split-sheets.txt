@@ -1241,10 +1241,11 @@ function doGet(e) {
   if (e.parameter.action === "getQuiz") {
     var targetSet = String(e.parameter.set || "");
     var targetGrade = normalizeGradeName_(e.parameter.grade);
+    var targetSubject = String(e.parameter.subject || "").trim();
     var result = { passage: "", questions: [] };
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var cache = CacheService.getScriptCache();
-    var cacheKey = "quiz:" + targetGrade + ":" + targetSet;
+    var cacheKey = "quiz:" + targetGrade + ":" + targetSubject + ":" + targetSet + ":quiz";
     var cachedQuiz = cache.get(cacheKey);
 
     if (cachedQuiz) {
@@ -1253,7 +1254,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    result.passage = getQuizPassage_(ss, targetSet, targetGrade);
+    result.passage = getQuizPassage_(ss, targetSet, targetGrade, targetSubject, "quiz");
     result.questions = getQuizQuestions_(ss, targetSet, targetGrade);
 
     var quizJson = JSON.stringify(result);
@@ -1270,8 +1271,9 @@ function doGet(e) {
   if (e.parameter.action === "getPassage") {
     var passageSet = String(e.parameter.set || "");
     var passageGrade = normalizeGradeName_(e.parameter.grade);
+    var passageSubject = String(e.parameter.subject || "").trim();
     var passageCache = CacheService.getScriptCache();
-    var passageCacheKey = "passage:" + passageGrade + ":" + passageSet;
+    var passageCacheKey = "passage:" + passageGrade + ":" + passageSubject + ":" + passageSet + ":memorize";
     var cachedPassage = passageCache.get(passageCacheKey);
 
     if (cachedPassage) {
@@ -1281,7 +1283,13 @@ function doGet(e) {
     }
 
     var passageJson = JSON.stringify({
-      passage: getQuizPassage_(SpreadsheetApp.getActiveSpreadsheet(), passageSet, passageGrade)
+      passage: getQuizPassage_(
+        SpreadsheetApp.getActiveSpreadsheet(),
+        passageSet,
+        passageGrade,
+        passageSubject,
+        "memorize"
+      )
     });
 
     if (passageJson.length < 90000) {
@@ -1569,7 +1577,7 @@ function normalizeGradeName_(grade) {
   return value;
 }
 
-function getQuizPassage_(ss, targetSet, targetGrade) {
+function getQuizPassage_(ss, targetSet, targetGrade, targetSubject, mode) {
   var passageSheet = ss.getSheetByName("Passages");
   if (!passageSheet || !targetSet) return "";
 
@@ -1582,23 +1590,37 @@ function getQuizPassage_(ss, targetSet, targetGrade) {
     .matchEntireCell(true)
     .findAll();
 
+  var fallback = "";
   for (var i = 0; i < setMatches.length; i++) {
     var rowNumber = setMatches[i].getRow();
-    var row = passageSheet.getRange(rowNumber, 1, 1, 5).getValues()[0];
+    var row = passageSheet.getRange(rowNumber, 1, 1, 7).getValues()[0];
     var rowGrade = normalizeGradeName_(row[0]);
+    var rowSubject = String(row[1] || "").trim();
 
     if (targetGrade && rowGrade !== targetGrade) continue;
+    if (targetSubject && rowSubject !== targetSubject) continue;
 
     var passageCell = passageSheet.getRange(rowNumber, 5);
-    return resolvePassageText_(
+    var passage = resolvePassageText_(
       ss,
       row[4],
       passageCell.getRichTextValue(),
       passageCell.getBackground()
     );
+    if (!fallback) fallback = passage;
+    if (isPassageModeMatch_(row[6], mode)) return passage;
   }
 
-  return "";
+  return fallback;
+}
+
+function isPassageModeMatch_(learningType, mode) {
+  var normalized = String(learningType || "").trim().toLowerCase();
+  if (normalized === "둘다" || normalized === "both") return true;
+  if (mode === "memorize") {
+    return normalized === "빈칸" || normalized === "암기" || normalized === "memorize";
+  }
+  return normalized !== "빈칸" && normalized !== "암기" && normalized !== "memorize";
 }
 
 function getQuizQuestions_(ss, targetSet, targetGrade) {

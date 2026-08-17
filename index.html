@@ -217,12 +217,11 @@
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
 
         let db = {};
-        let passwordDB = {}; 
-        let learningTypeDB = {};
         let selectedCategory = "";
         let selectedGrade = "";
         let selectedSubject = "";
         let selectedProblem = "";
+        let selectedPassword = "";
         let selectedLearningMode = "quiz";
         let step3BackTarget = "step2";
 
@@ -246,21 +245,25 @@
                 if (!Array.isArray(data)) {
                     throw new Error("Invalid data");
                 }
-                categoryDiv.innerHTML = ""; 
-                
+                categoryDiv.innerHTML = "";
+                db = {};
+                const fallbackPasswords = {};
+
+                data.forEach(item => {
+                    const key = `${item.grade}-${item.subject}-${item.set}`;
+                    const password = String(item.password || '').trim();
+                    if (password && !fallbackPasswords[key]) fallbackPasswords[key] = password;
+                });
+
                 data.forEach(item => {
                     if (!db[item.grade]) db[item.grade] = {};
                     if (!db[item.grade][item.subject]) db[item.grade][item.subject] = [];
-                    
-                    if (!db[item.grade][item.subject].includes(item.set)) {
-                        db[item.grade][item.subject].push(item.set);
-                    }
-
                     const key = `${item.grade}-${item.subject}-${item.set}`;
-                    if (item.password || !(key in passwordDB)) {
-                        passwordDB[key] = item.password;
-                    }
-                    learningTypeDB[key] = mergeLearningTypes(learningTypeDB[key], item.learningType);
+                    db[item.grade][item.subject].push({
+                        set: String(item.set || '').trim(),
+                        password: String(item.password || '').trim() || fallbackPasswords[key] || '',
+                        learningType: normalizeLearningType(item.learningType)
+                    });
                 });
 
                 renderCategoryButtons();
@@ -375,45 +378,36 @@
             let problems = db[selectedGrade][subject];
             for (let i = 0; i < problems.length; i++) {
                 const problem = problems[i];
-                const learningType = getLearningType(problem);
-                if (isSchoolExamGrade(selectedGrade) && learningType === '빈칸') {
-                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'memorize')">${problem} 빈칸 채우기</button>`;
-                } else if (isSchoolExamGrade(selectedGrade) && learningType === '둘다') {
-                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'quiz')">${problem} 문제 풀기</button>`;
-                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'memorize')">${problem} 빈칸 채우기</button>`;
+                if (!isSchoolExamGrade(selectedGrade)) {
+                    appendProblemButton(problemDiv, i, problem, 'quiz');
+                } else if (problem.learningType === '둘다') {
+                    appendProblemButton(problemDiv, i, problem, 'quiz');
+                    appendProblemButton(problemDiv, i, problem, 'memorize');
                 } else {
-                    problemDiv.innerHTML += `<button onclick="selectProblem('${problem}', 'quiz')">${problem}</button>`;
+                    appendProblemButton(problemDiv, i, problem, problem.learningType === '빈칸' ? 'memorize' : 'quiz');
                 }
             }
             changeScreen('step3', 'step4');
         }
 
-        function selectProblem(problem, mode) {
-            selectedProblem = problem;
+        function appendProblemButton(container, index, problem, mode) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.innerText = getProblemDisplayName(problem.set, mode);
+            button.onclick = () => selectProblemByIndex(index, mode);
+            container.appendChild(button);
+        }
+
+        function selectProblemByIndex(index, mode) {
+            const problem = db[selectedGrade][selectedSubject][index];
+            selectedProblem = problem.set;
+            selectedPassword = problem.password;
             selectedLearningMode = mode || 'quiz';
             showPasswordScreen('step4');
         }
 
         function isSchoolExamGrade(grade) {
             return ["중1", "중2", "중3", "고1", "고2", "고3"].includes(grade);
-        }
-
-        function getLearningType(problem) {
-            const key = `${selectedGrade}-${selectedSubject}-${problem}`;
-            const value = String(learningTypeDB[key] || '문제').trim().toLowerCase();
-            if (value === '빈칸' || value === '암기' || value === 'memorize') return '빈칸';
-            if (value === '둘다' || value === 'both') return '둘다';
-            return '문제';
-        }
-
-        function mergeLearningTypes(currentValue, nextValue) {
-            if (typeof currentValue === 'undefined') {
-                return normalizeLearningType(nextValue);
-            }
-            const current = normalizeLearningType(currentValue);
-            const next = normalizeLearningType(nextValue);
-            if (current === '둘다' || next === '둘다' || current !== next) return '둘다';
-            return current;
         }
 
         function normalizeLearningType(value) {
@@ -423,10 +417,14 @@
             return '문제';
         }
 
+        function getProblemDisplayName(problem, mode) {
+            if (!isSchoolExamGrade(selectedGrade)) return problem;
+            const suffix = mode === 'memorize' ? '빈칸 채우기' : '문제 풀기';
+            return problem.includes(suffix) ? problem : `${problem} ${suffix}`;
+        }
+
         function showPasswordScreen(fromStep) {
-            const learningName = selectedLearningMode === 'memorize'
-                ? `${selectedProblem} 빈칸 채우기`
-                : `${selectedProblem} 문제 풀기`;
+            const learningName = getProblemDisplayName(selectedProblem, selectedLearningMode);
             document.getElementById('problem-title').innerText = "선택한 학습: " + learningName;
             document.getElementById('start-learning-btn').innerText = selectedLearningMode === 'memorize'
                 ? "빈칸 채우기 시작"
@@ -455,8 +453,7 @@
         function checkPassword() {
             const studentName = document.getElementById('student-name').value.trim();
             const pwd = document.getElementById('password-input').value;
-            const key = `${selectedGrade}-${selectedSubject}-${selectedProblem}`;
-            const realPassword = passwordDB[key]; 
+            const realPassword = selectedPassword;
 
             if(!studentName) {
                 alert("학생 이름을 입력해 주세요!");
