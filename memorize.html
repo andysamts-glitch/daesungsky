@@ -390,9 +390,12 @@
                 const stateClass = studyItem.answered ? (studyItem.correct ? ' correct' : ' wrong') : '';
                 const activeClass = activeStudyItem && activeStudyItem.id === studyItem.id ? ' active' : '';
                 const token = `%%STUDY_BLANK_${studyItem.id}%%`;
+                const displayText = studyItem.answered && studyItem.correct
+                    ? studyItem.answer
+                    : getBlankPlaceholder(studyItem.answer);
                 replacements.push({
                     token: token,
-                    html: `<button type="button" class="study-blank${stateClass}${activeClass}" onclick="selectStudyBlank(${studyItem.id})">${escapeHtml(getBlankPlaceholder(studyItem.answer))}</button>`
+                    html: `<button type="button" class="study-blank${stateClass}${activeClass}" onclick="selectStudyBlank(${studyItem.id})">${escapeHtml(displayText)}</button>`
                 });
                 return token;
             });
