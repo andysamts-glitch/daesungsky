@@ -255,10 +255,12 @@
                     if (!db[item.grade][item.subject].includes(item.set)) {
                         db[item.grade][item.subject].push(item.set);
                     }
-                    
+
                     const key = `${item.grade}-${item.subject}-${item.set}`;
-                    passwordDB[key] = item.password;
-                    learningTypeDB[key] = String(item.learningType || "").trim();
+                    if (item.password || !(key in passwordDB)) {
+                        passwordDB[key] = item.password;
+                    }
+                    learningTypeDB[key] = mergeLearningTypes(learningTypeDB[key], item.learningType);
                 });
 
                 renderCategoryButtons();
@@ -398,9 +400,26 @@
 
         function getLearningType(problem) {
             const key = `${selectedGrade}-${selectedSubject}-${problem}`;
-            const value = String(learningTypeDB[key] || '').trim().toLowerCase();
+            const value = String(learningTypeDB[key] || '문제').trim().toLowerCase();
             if (value === '빈칸' || value === '암기' || value === 'memorize') return '빈칸';
             if (value === '둘다' || value === 'both') return '둘다';
+            return '문제';
+        }
+
+        function mergeLearningTypes(currentValue, nextValue) {
+            if (typeof currentValue === 'undefined') {
+                return normalizeLearningType(nextValue);
+            }
+            const current = normalizeLearningType(currentValue);
+            const next = normalizeLearningType(nextValue);
+            if (current === '둘다' || next === '둘다' || current !== next) return '둘다';
+            return current;
+        }
+
+        function normalizeLearningType(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (normalized === '빈칸' || normalized === '암기' || normalized === 'memorize') return '빈칸';
+            if (normalized === '둘다' || normalized === 'both') return '둘다';
             return '문제';
         }
 
