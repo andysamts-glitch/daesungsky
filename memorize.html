@@ -391,7 +391,8 @@
             let localTargetIndex = 0;
             const replacements = [];
             const tokenized = String(paragraph).replace(/<u>([\s\S]*?)<\/u>/gi, (match, inner) => {
-                const target = allTargets.find(item => item.paragraphIndex === paragraphIndex && item.targetIndex === localTargetIndex++);
+                const targetIndex = localTargetIndex++;
+                const target = allTargets.find(item => item.paragraphIndex === paragraphIndex && item.targetIndex === targetIndex);
                 const studyItem = target && studyItems.find(item => item.id === target.id);
                 if (!studyItem) return match;
 
