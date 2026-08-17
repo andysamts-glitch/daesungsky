@@ -1430,7 +1430,7 @@ function getPassageStudyLeaderboard_(e) {
   return ContentService
     .createTextOutput(JSON.stringify({
       type: "passageStudyLeaderboard",
-      monthLabel: Utilities.formatDate(now, Session.getScriptTimeZone(), "M월 누적 참여 순위"),
+      monthLabel: Utilities.formatDate(now, Session.getScriptTimeZone(), "M월 참여 순위"),
       rows: leaderboard
     }))
     .setMimeType(ContentService.MimeType.JSON);
