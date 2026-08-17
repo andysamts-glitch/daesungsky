@@ -23,11 +23,11 @@
         .paragraph-number { position: absolute; left: 0; color: #2b6cb0; font-family: 'Malgun Gothic', sans-serif; font-size: 14px; font-weight: 800; }
         .passage-box u { text-decoration-color: #718096; text-decoration-thickness: 1px; text-underline-offset: 3px; }
         .passage-box mark { padding: 0 2px; background: #edf2f7; color: inherit; }
-        .study-blank { display: inline; min-width: 72px; padding: 1px 5px; border: 1px solid #90cdf4; border-radius: 4px; background: #ebf8ff; color: #1a365d; font: inherit; font-family: Georgia, 'Times New Roman', serif; font-size: 0.94em; font-weight: 700; line-height: inherit; vertical-align: baseline; }
-        .study-blank:hover, .study-blank.active { border-color: #2b6cb0; background: #bee3f8; }
+        .study-blank { display: inline; padding: 0 2px; border: 0; border-radius: 3px; background: transparent; color: #1a365d; font: inherit; font-family: Georgia, 'Times New Roman', serif; font-size: 0.94em; font-weight: 700; letter-spacing: 1px; line-height: inherit; vertical-align: baseline; }
+        .study-blank:hover, .study-blank.active { background: #ebf8ff; }
         .study-blank.active { box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.18); }
-        .study-blank.correct { border-color: #68d391; background: #f0fff4; color: #276749; }
-        .study-blank.wrong { border-color: #fc8181; background: #fff5f5; color: #9b2c2c; }
+        .study-blank.correct { background: #f0fff4; color: #276749; }
+        .study-blank.wrong { background: #fff5f5; color: #9b2c2c; }
         .study-box { display: flex; flex-direction: column; padding: 24px; font-family: 'Malgun Gothic', sans-serif; }
         .progress { margin-bottom: 18px; color: #2b6cb0; font-size: 14px; font-weight: 800; }
         .question-title { min-height: 74px; color: #1a365d; font-size: 20px; font-weight: 800; line-height: 1.5; }
@@ -394,14 +394,14 @@
                 const targetIndex = localTargetIndex++;
                 const target = allTargets.find(item => item.paragraphIndex === paragraphIndex && item.targetIndex === targetIndex);
                 const studyItem = target && studyItems.find(item => item.id === target.id);
-                if (!studyItem) return match;
+                if (!studyItem) return inner;
 
                 const stateClass = studyItem.answered ? (studyItem.correct ? ' correct' : ' wrong') : '';
                 const activeClass = activeStudyItem && activeStudyItem.id === studyItem.id ? ' active' : '';
                 const token = `%%STUDY_BLANK_${studyItem.id}%%`;
                 replacements.push({
                     token: token,
-                    html: `<button type="button" class="study-blank${stateClass}${activeClass}" onclick="selectStudyBlank(${studyItem.id})">${studyItem.number}번 빈칸</button>`
+                    html: `<button type="button" class="study-blank${stateClass}${activeClass}" onclick="selectStudyBlank(${studyItem.id})">${escapeHtml(getBlankPlaceholder(studyItem.answer))}</button>`
                 });
                 return token;
             });
@@ -437,7 +437,7 @@
             }
 
             answerArea.classList.remove('hidden');
-            title.innerText = `${activeStudyItem.number}번 빈칸`;
+            title.innerText = '선택한 빈칸';
             help.innerText = activeStudyItem.answered
                 ? '지문에서 다른 빈칸을 눌러 계속 풀어 주세요.'
                 : '띄어쓰기와 대소문자는 달라도 맞게 처리됩니다.';
@@ -539,6 +539,10 @@
                 .replace(/[“”"'.,!?;:()[\]{}]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
+        }
+
+        function getBlankPlaceholder(answer) {
+            return String(answer || '').replace(/[A-Za-z0-9]/g, '_');
         }
 
         function plainText(value) {
