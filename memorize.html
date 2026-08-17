@@ -588,9 +588,15 @@
         }
 
         function getBlankPlaceholder(answer) {
-            const letterCount = (String(answer || '').match(/[A-Za-z0-9]/g) || []).length;
-            const blankLength = Math.min(Math.max(letterCount, 7), 18);
-            return '_'.repeat(blankLength);
+            return String(answer || '')
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .map(word => {
+                    const letterCount = (word.match(/[A-Za-z0-9]/g) || []).length;
+                    return '_'.repeat(Math.max(letterCount, 1));
+                })
+                .join(' ');
         }
 
         function plainText(value) {
