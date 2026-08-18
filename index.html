@@ -82,6 +82,10 @@
         .toefl-writing-btn:hover { background-color: #277a7a; }
         .toefl-writing-practice-btn { background-color: #c04f78; }
         .toefl-writing-practice-btn:hover { background-color: #a73d62; }
+        .problem-quiz-btn { background-color: #2b6cb0; }
+        .problem-quiz-btn:hover { background-color: #1a365d; }
+        .problem-memorize-btn { background-color: #0f766e; }
+        .problem-memorize-btn:hover { background-color: #115e59; }
         .back-btn { background-color: #a0aec0; margin-top: 10px; }
         .back-btn:hover { background-color: #718096; }
 
@@ -432,6 +436,7 @@
         function appendProblemButton(container, index, problem, mode) {
             const button = document.createElement('button');
             button.type = 'button';
+            button.className = mode === 'memorize' ? 'problem-memorize-btn' : 'problem-quiz-btn';
             button.innerText = getProblemDisplayName(problem.set, mode);
             button.onclick = () => selectProblemByIndex(index, mode);
             container.appendChild(button);
