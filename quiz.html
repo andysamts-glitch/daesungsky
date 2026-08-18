@@ -627,7 +627,8 @@
         sentenceArea.classList.add('hidden');
         subjectiveArea.classList.remove('hidden');
         spellingPrefixElement.innerText = spellingPrefix;
-        spellingPrefixElement.classList.toggle('hidden', !spellingPrefix);
+        spellingPrefixElement.classList.remove('hidden');
+        spellingPrefixElement.style.display = spellingPrefix ? 'inline-flex' : 'none';
         spellingInputRow.classList.toggle('has-prefix', !!spellingPrefix);
         subjectiveInput.value = getSpellingEntryValue(q.draftAnswer, spellingPrefix);
         subjectiveInput.placeholder = spellingPrefix
@@ -713,7 +714,7 @@
 
             const q = quizData[questionIndex];
             const stem = stemWithBlanks.replace(/[\s_]/g, "");
-            const displayText = q.answered ? `${getSpellingFullAnswer(q)} (${number})` : match;
+            const displayText = q.answered ? `${getSpellingFullAnswer(q, stem)} (${number})` : match;
             const stateClass = q.answered ? (q.userCorrect ? ' correct' : ' revealed') : '';
             const activeClass = number === activeSpellingBlankNumber ? ' active' : '';
             const marker = `%%SPELLING_BLANK_${number}%%`;
@@ -735,21 +736,31 @@
     function getSpellingStem(q) {
         const question = String((q && q.question) || '');
         const match = question.match(/([A-Za-z]+)(?:\s*_\s*)+\s*\(\d+\)/);
+        if (match) return match[1];
+
+        return getSpellingPassageStem(getSpellingBlankNumber(q));
+    }
+
+    function getSpellingPassageStem(number) {
+        if (!number) return '';
+
+        const pattern = new RegExp(`([A-Za-z]+)(?:\\s*_\\s*)+\\(${number}\\)`, 'i');
+        const match = String(currentPassage || '').match(pattern);
         return match ? match[1] : '';
     }
 
-    function getSpellingAnswerSuffix(q) {
+    function getSpellingAnswerSuffix(q, stemOverride) {
         const answer = String((q && q.answer) || '').trim();
-        const stem = getSpellingStem(q);
+        const stem = stemOverride || getSpellingStem(q);
         if (stem && answer.toLowerCase().startsWith(stem.toLowerCase())) {
             return answer.slice(stem.length);
         }
         return answer;
     }
 
-    function getSpellingFullAnswer(q) {
-        const stem = getSpellingStem(q);
-        const suffix = getSpellingAnswerSuffix(q);
+    function getSpellingFullAnswer(q, stemOverride) {
+        const stem = stemOverride || getSpellingStem(q);
+        const suffix = getSpellingAnswerSuffix(q, stem);
         return stem ? `${stem}${suffix}` : suffix;
     }
 
