@@ -281,7 +281,7 @@
         }
 
         function loadCategoryData(categoryDiv) {
-            fetchJsonWithRetry(`${scriptURL}?t=${Date.now()}`, 3, 12000, (nextAttempt, maxAttempts) => {
+            fetchJsonWithRetry(`${scriptURL}?t=${Date.now()}`, 3, 20000, (nextAttempt, maxAttempts) => {
                 categoryDiv.innerHTML = `<p style="grid-column: span 2;">연결이 불안정해 데이터를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})</p>`;
             })
             .then(data => {

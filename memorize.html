@@ -169,7 +169,7 @@
             const loading = document.getElementById('loading');
             const url = `${scriptURL}?action=getPassage&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
 
-            fetchJsonWithRetry(url, 3, 12000, (nextAttempt, maxAttempts) => {
+            fetchJsonWithRetry(url, 3, 20000, (nextAttempt, maxAttempts) => {
                 loading.innerText = `연결이 불안정해 지문을 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
             })
             .then(data => {
