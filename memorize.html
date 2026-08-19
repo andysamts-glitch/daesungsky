@@ -442,7 +442,7 @@
                 const stateClass = studyItem.answered ? (studyItem.correct ? ' correct' : ' wrong') : '';
                 const activeClass = activeStudyItem && activeStudyItem.id === studyItem.id ? ' active' : '';
                 const token = `%%STUDY_BLANK_${studyItem.id}%%`;
-                const displayText = studyItem.answered && studyItem.correct
+                const displayText = studyItem.answered
                     ? studyItem.answer
                     : getBlankPlaceholder(studyItem.answer);
                 replacements.push({
