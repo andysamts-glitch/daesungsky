@@ -72,6 +72,7 @@ function doPost(e) {
       e.parameter.learningType || ""
     ]);
     CacheService.getScriptCache().remove("writingSetPasswordMap_v1");
+    CacheService.getScriptCache().remove("passageList_v1");
   }
   return ContentService.createTextOutput("성공");
 }
@@ -1301,12 +1302,24 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 첫 화면 목록은 Passages에서 가져오기
+  // 첫 화면 목록은 짧게 캐시해 동시에 접속한 학생들이 시트를 반복해서 읽지 않게 한다.
+  return ContentService
+    .createTextOutput(getPassageListJson_())
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getPassageListJson_() {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "passageList_v1";
+  var cached = cache.get(cacheKey);
+  if (cached) return cached;
+
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Passages");
   var dataList = [];
-  if (sheet) {
-    var rows = sheet.getDataRange().getValues();
-    for (var j = 1; j < rows.length; j++) {
+  if (sheet && sheet.getLastRow() > 1) {
+    // 실제로 사용하는 A:G열만 읽는다. getDataRange()보다 빠르고 안정적이다.
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+    for (var j = 0; j < rows.length; j++) {
       var row = rows[j];
       if (row[0] && row[1] && row[2]) {
         dataList.push({
@@ -1320,9 +1333,12 @@ function doGet(e) {
     }
   }
 
-  return ContentService
-    .createTextOutput(JSON.stringify(dataList))
-    .setMimeType(ContentService.MimeType.JSON);
+  var json = JSON.stringify(dataList);
+  // 새 항목을 시트에 직접 추가해도 오래 기다리지 않도록 2분만 보관한다.
+  if (json.length < 90000) {
+    cache.put(cacheKey, json, 120);
+  }
+  return json;
 }
 
 function getPublicScoreResults_(e) {
