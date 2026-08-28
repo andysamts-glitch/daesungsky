@@ -27,6 +27,7 @@
         .passage-box u { text-decoration-color: #718096; text-decoration-thickness: 1px; text-underline-offset: 3px; }
         .passage-box mark { padding: 0 2px; background: #edf2f7; color: inherit; }
         .study-blank { display: inline; padding: 0 2px; border: 0; border-radius: 3px; background: transparent; color: #1a365d; font: inherit; font-family: Georgia, 'Times New Roman', serif; font-size: 0.94em; font-weight: 700; letter-spacing: 1px; line-height: inherit; vertical-align: baseline; }
+        .study-blank.school-placeholder { display: inline-block; min-width: 6.8em; color: #4a5568; letter-spacing: 0; text-align: left; }
         .study-blank:hover, .study-blank.active { background: #ebf8ff; }
         .study-blank.active { box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.18); }
         .study-blank.correct { background: #f0fff4; color: #276749; }
@@ -441,13 +442,14 @@
 
                 const stateClass = studyItem.answered ? (studyItem.correct ? ' correct' : ' wrong') : '';
                 const activeClass = activeStudyItem && activeStudyItem.id === studyItem.id ? ' active' : '';
+                const placeholderClass = studyItem.answered || isToeflMemorize() ? '' : ' school-placeholder';
                 const token = `%%STUDY_BLANK_${studyItem.id}%%`;
                 const displayText = studyItem.answered
                     ? studyItem.answer
                     : getBlankPlaceholder(studyItem.answer);
                 replacements.push({
                     token: token,
-                    html: `<button type="button" class="study-blank${stateClass}${activeClass}" onclick="selectStudyBlank(${studyItem.id})">${escapeHtml(displayText)}</button>`
+                    html: `<button type="button" class="study-blank${stateClass}${activeClass}${placeholderClass}" onclick="selectStudyBlank(${studyItem.id})">${escapeHtml(displayText)}</button>`
                 });
                 return token;
             });
@@ -588,6 +590,8 @@
         }
 
         function getBlankPlaceholder(answer) {
+            if (!isToeflMemorize()) return '_______';
+
             return String(answer || '')
                 .trim()
                 .split(/\s+/)
@@ -597,6 +601,10 @@
                     return '_'.repeat(Math.max(letterCount, 1));
                 })
                 .join(' ');
+        }
+
+        function isToeflMemorize() {
+            return String(selectedGrade || '').trim().toUpperCase() === 'TOEFL';
         }
 
         function plainText(value) {
