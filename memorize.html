@@ -27,7 +27,7 @@
         .passage-box u { text-decoration-color: #718096; text-decoration-thickness: 1px; text-underline-offset: 3px; }
         .passage-box mark { padding: 0 2px; background: #edf2f7; color: inherit; }
         .study-blank { display: inline; padding: 0 2px; border: 0; border-radius: 3px; background: transparent; color: #1a365d; font: inherit; font-family: Georgia, 'Times New Roman', serif; font-size: 0.94em; font-weight: 700; letter-spacing: 1px; line-height: inherit; vertical-align: baseline; }
-        .study-blank.school-placeholder { display: inline-block; min-width: 6.8em; color: #4a5568; letter-spacing: 0; text-align: left; }
+        .study-blank.school-placeholder { padding: 0; color: #4a5568; letter-spacing: 0; word-spacing: 0; }
         .study-blank:hover, .study-blank.active { background: #ebf8ff; }
         .study-blank.active { box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.18); }
         .study-blank.correct { background: #f0fff4; color: #276749; }
@@ -590,7 +590,14 @@
         }
 
         function getBlankPlaceholder(answer) {
-            if (!isToeflMemorize()) return '_______';
+            if (!isToeflMemorize()) {
+                return String(answer || '')
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .map(() => '_______')
+                    .join(' ');
+            }
 
             return String(answer || '')
                 .trim()
