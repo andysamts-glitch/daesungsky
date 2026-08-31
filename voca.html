@@ -426,9 +426,10 @@
         optionsArea.innerHTML = "";
 
         if (isShortAnswerQuestion(q)) {
+            const englishDefinition = isEnglishDefinitionQuestion(q);
             optionsArea.innerHTML = `
-                <p class="short-answer-guide">단어의 뜻을 한국어로 입력한 뒤 다음 문제를 누르세요.</p>
-                <input id="short-answer-input" class="short-answer-input" type="text" autocomplete="off" placeholder="한국어 뜻을 입력하세요">
+                <p class="short-answer-guide">${englishDefinition ? '단어의 영어 정의를 입력한 뒤 다음 문제를 누르세요.' : '단어의 한국어 뜻을 입력한 뒤 다음 문제를 누르세요.'}</p>
+                <input id="short-answer-input" class="short-answer-input" type="text" autocomplete="off" placeholder="${englishDefinition ? '영어로 뜻을 입력하세요' : '한국어 뜻을 입력하세요'}">
             `;
 
             const input = document.getElementById('short-answer-input');
@@ -475,7 +476,13 @@
 
     function isShortAnswerQuestion(question) {
         const type = String(question.questionType || '').trim().toLowerCase();
-        return type === '주관식' || type === 'short' || type === 'short-answer';
+        return type === '주관식' || type === 'short' || type === 'short-answer' ||
+            type === '영영' || type === '영영주관식' || type === 'english';
+    }
+
+    function isEnglishDefinitionQuestion(question) {
+        const type = String(question.questionType || '').trim().toLowerCase();
+        return type === '영영' || type === '영영주관식' || type === 'english';
     }
 
     function saveShortAnswer() {
