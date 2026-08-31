@@ -30,6 +30,9 @@
         .option-btn:hover { background-color: #edf2f7; border-color: #cbd5e0; }
         
         .option-btn.selected { background-color: #ebf8ff; border-color: #3182ce; color: #2b6cb0; font-weight: bold; }
+        .short-answer-guide { margin: 0 0 10px; color: #4a5568; font-size: 15px; text-align: center; }
+        .short-answer-input { width: 100%; padding: 15px; border: 2px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; color: #2d3748; font: inherit; font-size: 18px; }
+        .short-answer-input:focus { outline: none; border-color: #3182ce; }
 
         .progress { text-align: right; font-weight: bold; color: #718096; margin-bottom: 20px; }
         .question { font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 30px; color: #2b6cb0; }
@@ -362,6 +365,7 @@
             return {
                 question: q.question,
                 answer: q.answer,
+                questionType: q.questionType || '',
                 options: shuffleArray(options), 
                 pickedText: null,               
                 isCorrect: false                
@@ -420,6 +424,25 @@
         const q = currentQuizData[currentIndex];
         const optionsArea = document.getElementById('options-area');
         optionsArea.innerHTML = "";
+
+        if (isShortAnswerQuestion(q)) {
+            optionsArea.innerHTML = `
+                <p class="short-answer-guide">단어의 뜻을 한국어로 입력한 뒤 다음 문제를 누르세요.</p>
+                <input id="short-answer-input" class="short-answer-input" type="text" autocomplete="off" placeholder="한국어 뜻을 입력하세요">
+            `;
+
+            const input = document.getElementById('short-answer-input');
+            input.value = q.pickedText || '';
+            input.addEventListener('input', saveShortAnswer);
+            input.addEventListener('keydown', event => {
+                if (event.key === 'Enter' && currentIndex < currentQuizData.length - 1) {
+                    event.preventDefault();
+                    nextQuestion();
+                }
+            });
+            input.focus();
+            return;
+        }
         
         q.options.forEach(opt => {
             const btn = document.createElement('button');
@@ -450,7 +473,41 @@
         }
     }
 
+    function isShortAnswerQuestion(question) {
+        const type = String(question.questionType || '').trim().toLowerCase();
+        return type === '주관식' || type === 'short' || type === 'short-answer';
+    }
+
+    function saveShortAnswer() {
+        const input = document.getElementById('short-answer-input');
+        const q = currentQuizData[currentIndex];
+        if (!input || !q || !isShortAnswerQuestion(q)) return;
+
+        q.pickedText = input.value.trim();
+        q.isCorrect = isShortAnswerCorrect(q.pickedText, q.answer);
+        saveTestProgress();
+    }
+
+    function isShortAnswerCorrect(studentAnswer, answer) {
+        const submitted = normalizeShortAnswer(studentAnswer);
+        if (!submitted) return false;
+        return String(answer || '')
+            .split('/')
+            .map(normalizeShortAnswer)
+            .filter(Boolean)
+            .includes(submitted);
+    }
+
+    function normalizeShortAnswer(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[.,!?;:()[\]{}]/g, '')
+            .replace(/\s+/g, '')
+            .trim();
+    }
+
     function prevQuestion() {
+        saveShortAnswer();
         if (currentIndex > 0) {
             currentIndex--;
             renderQuiz();
@@ -459,6 +516,7 @@
     }
 
     function nextQuestion() {
+        saveShortAnswer();
         if (currentIndex < currentQuizData.length - 1) {
             currentIndex++;
             renderQuiz();
@@ -477,6 +535,7 @@
 
     function endTest() {
         clearTimeout(autoAdvanceTimer);
+        saveShortAnswer();
         testSessionActive = false;
         let finalScore = currentQuizData.filter(q => q.isCorrect).length;
         let wrongAnswers = currentQuizData.filter(q => !q.isCorrect);

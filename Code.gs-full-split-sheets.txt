@@ -1227,7 +1227,8 @@ function doGet(e) {
             answer: String(vocaRows[i][4]),
             w1: String(vocaRows[i][5]),
             w2: String(vocaRows[i][6]),
-            w3: String(vocaRows[i][7])
+            w3: String(vocaRows[i][7]),
+            questionType: String(vocaRows[i][8] || "")
           });
         }
       }
