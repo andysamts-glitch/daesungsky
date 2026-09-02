@@ -846,7 +846,7 @@
     function renderQuiz() {
         const q = quizData[currentIndex];
         document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${quizData.length}`;
-        document.getElementById('question-text').innerText = `Q. ${q.question}`;
+        document.getElementById('question-text').innerHTML = `Q. ${formatPassageMarkup(q.question)}`;
         document.getElementById('feedback').innerText = "";
         document.getElementById('next-question-btn').classList.add('hidden');
         
@@ -887,7 +887,7 @@
                 if(opt.text && opt.text.trim() !== "undefined" && opt.text.trim() !== "") {
                     const btn = document.createElement('button');
                     btn.className = 'option-btn';
-                    btn.innerText = opt.text;
+                    btn.innerHTML = formatPassageMarkup(opt.text);
                     btn.dataset.correct = opt.isCorrect ? "true" : "false";
                     btn.onclick = () => checkObjective(btn, opt.isCorrect);
                     optionsArea.appendChild(btn);
