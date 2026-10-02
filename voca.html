@@ -47,6 +47,8 @@
         .home-btn:hover { background-color: #c05621; }
         .intro-home-row { text-align: left; margin-bottom: 6px; }
         .resume-message { margin: -4px 0 13px; color: #2b6cb0; font-size: 14px; font-weight: bold; text-align: left; }
+        #voca-load-status { margin: -8px 0 12px; font-size: 14px; line-height: 1.55; }
+        #voca-retry-btn { margin-bottom: 18px; }
 
         .wrong-list { margin-top: 20px; text-align: left; background: #fff5f5; padding: 20px; border-radius: 10px; border: 1px solid #feb2b2; }
         .wrong-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #feb2b2; }
@@ -77,6 +79,8 @@
         <select id="day-select">
             <option value="">데이터를 불러오는 중입니다...</option>
         </select>
+        <p id="voca-load-status" role="status" class="hidden"></p>
+        <button id="voca-retry-btn" type="button" class="hidden" onclick="loadVocaData()">다시 불러오기</button>
 
         <label><b>🎯 시험 범위 선택</b></label>
         <select id="range-select">
@@ -85,7 +89,7 @@
             <option value="half2">뒷부분 절반 풀기</option>
         </select>
 
-        <button id="start-btn" onclick="startTest()">시험 시작하기</button>
+        <button id="start-btn" onclick="startTest()" disabled>시험 시작하기</button>
     </div>
 
     <div id="quiz-screen" class="hidden">
@@ -155,8 +159,25 @@
 
         if (restoreSavedTest()) return;
 
-        fetch(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&t=${new Date().getTime()}`)
-        .then(res => res.json())
+        loadVocaData();
+    };
+
+    function loadVocaData() {
+        const startButton = document.getElementById('start-btn');
+        const daySelect = document.getElementById('day-select');
+        const status = document.getElementById('voca-load-status');
+        const retryButton = document.getElementById('voca-retry-btn');
+        startButton.disabled = true;
+        daySelect.disabled = true;
+        retryButton.disabled = true;
+        retryButton.classList.add('hidden');
+        status.classList.add('hidden');
+        daySelect.innerHTML = '<option value="">데이터를 불러오는 중입니다...</option>';
+
+        return fetchVocaDataWithRetry(3, 20000, (attempt, maxAttempts) => {
+            status.textContent = `연결이 불안정해 단어를 다시 불러오는 중입니다... (${attempt}/${maxAttempts})`;
+            status.classList.remove('hidden');
+        })
         .then(data => {
             allVocaData = data;
             
@@ -173,9 +194,43 @@
                 document.getElementById('start-btn').disabled = true;
             } else {
                 fillSavedPassword();
+                startButton.disabled = false;
             }
+            daySelect.disabled = false;
+            status.classList.add('hidden');
+        })
+        .catch(() => {
+            daySelect.innerHTML = '<option value="">단어를 불러오지 못했습니다.</option>';
+            status.textContent = '연결을 확인하고 다시 시도해 주세요.';
+            status.classList.remove('hidden');
+            retryButton.disabled = false;
+            retryButton.classList.remove('hidden');
         });
-    };
+    }
+
+    async function fetchVocaDataWithRetry(maxAttempts, timeoutMs, onRetry) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const controller = typeof AbortController === 'function' ? new AbortController() : null;
+            const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+            let requestError;
+            try {
+                const options = { cache: 'no-store' };
+                if (controller) options.signal = controller.signal;
+                const response = await fetch(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&t=${Date.now()}`, options);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!Array.isArray(data)) throw new Error('Invalid vocabulary data');
+                return data;
+            } catch (error) {
+                requestError = error;
+            } finally {
+                if (timeoutId !== null) clearTimeout(timeoutId);
+            }
+            if (attempt === maxAttempts) throw requestError;
+            if (onRetry) onRetry(attempt + 1, maxAttempts);
+            await new Promise(resolve => setTimeout(resolve, attempt * 900));
+        }
+    }
 
     window.addEventListener('pagehide', saveTestProgress);
     document.addEventListener('visibilitychange', () => {

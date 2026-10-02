@@ -316,7 +316,10 @@
             }
         })
         .catch(() => {
-            loading.innerText = "문제를 불러오지 못했습니다. 잠시 후 새로고침 해주세요.";
+            document.getElementById('main-layout').classList.add('hidden');
+            document.getElementById('home-btn').classList.remove('hidden');
+            loading.classList.remove('hidden');
+            loading.innerHTML = '<p>문제를 불러오지 못했습니다. 다시 시도해 주세요.</p><button type="button" class="submit-btn" style="width: auto;" onclick="location.reload()">다시 불러오기</button>';
         });
     };
 
