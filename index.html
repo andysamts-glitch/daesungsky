@@ -222,6 +222,7 @@
         </div>
     </div>
 
+    <script src="study-data.js?v=20261004"></script>
     <script>
         //
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -287,8 +288,11 @@
         }
 
         function loadCategoryData(categoryDiv) {
-            fetchJsonWithRetry(`${scriptURL}?t=${Date.now()}`, 3, 20000, (nextAttempt, maxAttempts) => {
-                categoryDiv.innerHTML = `<p style="grid-column: span 2;">연결이 불안정해 데이터를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})</p>`;
+            StudyData.get(scriptURL, {
+                validate: Array.isArray,
+                onRetry: (nextAttempt, maxAttempts) => {
+                    categoryDiv.innerHTML = `<p style="grid-column: span 2;">연결이 불안정해 데이터를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})</p>`;
+                }
             })
             .then(data => {
                 if (!Array.isArray(data)) {
@@ -320,34 +324,6 @@
             .catch(() => {
                 categoryDiv.innerHTML = `<p style="grid-column: span 2; color: red; margin-bottom: 8px;">데이터를 불러오지 못했습니다.</p><button class="full-width" onclick="loadCategoryData(document.getElementById('category-btns'))">다시 불러오기</button>`;
             });
-        }
-
-        function fetchJsonWithRetry(url, maxAttempts, timeoutMs, onRetry) {
-            let attempt = 0;
-
-            function request() {
-                attempt++;
-                const controller = typeof AbortController === "function" ? new AbortController() : null;
-                const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
-                const options = { cache: "no-store" };
-                if (controller) options.signal = controller.signal;
-
-                return fetch(url, options)
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    return response.json();
-                })
-                .finally(() => {
-                    if (timeoutId) clearTimeout(timeoutId);
-                })
-                .catch(error => {
-                    if (attempt >= maxAttempts) throw error;
-                    if (onRetry) onRetry(attempt + 1, maxAttempts);
-                    return new Promise(resolve => setTimeout(resolve, attempt * 900)).then(request);
-                });
-            }
-
-            return request();
         }
 
         function renderCategoryButtons() {

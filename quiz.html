@@ -220,6 +220,7 @@
     </div>
 </div>
 
+<script src="study-data.js?v=20261004"></script>
 <script>
     // 🌟 선생님의 고유 스크립트 주소
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -271,8 +272,12 @@
 
         const loading = document.getElementById('loading');
         const quizUrl = `${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
-        fetchJsonWithRetry(quizUrl, 3, 20000, (nextAttempt, maxAttempts) => {
-            loading.innerText = `연결이 불안정해 문제를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
+        StudyData.get(quizUrl, {
+            validate: data => data && Array.isArray(data.questions) &&
+                (!isWritingPractice() || (typeof data.passage === 'string' && data.passage.trim())),
+            onRetry: (nextAttempt, maxAttempts) => {
+                loading.innerText = `연결이 불안정해 문제를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
+            }
         })
         .then(data => {
             if(!data || !Array.isArray(data.questions)) {
@@ -322,34 +327,6 @@
             loading.innerHTML = '<p>문제를 불러오지 못했습니다. 다시 시도해 주세요.</p><button type="button" class="submit-btn" style="width: auto;" onclick="location.reload()">다시 불러오기</button>';
         });
     };
-
-    function fetchJsonWithRetry(url, maxAttempts, timeoutMs, onRetry) {
-        let attempt = 0;
-
-        function request() {
-            attempt++;
-            const controller = typeof AbortController === "function" ? new AbortController() : null;
-            const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
-            const options = { cache: "no-store" };
-            if (controller) options.signal = controller.signal;
-
-            return fetch(url, options)
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                return response.json();
-            })
-            .finally(() => {
-                if (timeoutId) clearTimeout(timeoutId);
-            })
-            .catch(error => {
-                if (attempt >= maxAttempts) throw error;
-                if (onRetry) onRetry(attempt + 1, maxAttempts);
-                return new Promise(resolve => setTimeout(resolve, attempt * 900)).then(request);
-            });
-        }
-
-        return request();
-    }
 
     function isWritingPractice() {
         const subject = String(selectedSubject || "").trim();

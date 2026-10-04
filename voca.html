@@ -120,13 +120,15 @@
     </div>
 </div>
 
+<script src="study-data.js?v=20261004"></script>
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
     const VOCA_SESSION_PREFIX = 'dsskyVocaTestSession_v1:';
     const STUDENT_NAME_STORAGE_KEY = 'dsskyStudentName_v1';
     const PASSWORD_STORAGE_PREFIX = 'dsskyPassword_v1:';
     
-    let allVocaData = [];
+    let allVocaData = null;
+    let startingTest = false;
     let currentQuizData = []; 
     let currentIndex = 0;
     
@@ -174,19 +176,23 @@
         status.classList.add('hidden');
         daySelect.innerHTML = '<option value="">데이터를 불러오는 중입니다...</option>';
 
-        return fetchVocaDataWithRetry(3, 20000, (attempt, maxAttempts) => {
-            status.textContent = `연결이 불안정해 단어를 다시 불러오는 중입니다... (${attempt}/${maxAttempts})`;
-            status.classList.remove('hidden');
+        return StudyData.get(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&view=days`, {
+            validate: data => Array.isArray(data) || (data && data.mode === 'days' && Array.isArray(data.days)),
+            onRetry: (attempt, maxAttempts) => {
+                status.textContent = `연결이 불안정해 단어를 다시 불러오는 중입니다... (${attempt}/${maxAttempts})`;
+                status.classList.remove('hidden');
+            }
         })
         .then(data => {
-            allVocaData = data;
+            // The previous Apps Script deployment returns the full array, ignoring view=days.
+            allVocaData = Array.isArray(data) ? data : null;
             
-            let days = [...new Set(allVocaData.map(item => item.day))].sort((a,b) => a-b);
+            let days = [...new Set((allVocaData || data.days).map(item => String(item.day)))].sort((a,b) => a-b);
             let daySelect = document.getElementById('day-select');
             daySelect.innerHTML = "";
             days.forEach(d => {
                 const optionText = isTextbookSubject() ? `${d}` : `Day ${d}`;
-                daySelect.innerHTML += `<option value="${d}">${optionText}</option>`;
+                daySelect.add(new Option(optionText, d));
             });
 
             if(days.length === 0) {
@@ -208,28 +214,12 @@
         });
     }
 
-    async function fetchVocaDataWithRetry(maxAttempts, timeoutMs, onRetry) {
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            const controller = typeof AbortController === 'function' ? new AbortController() : null;
-            const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
-            let requestError;
-            try {
-                const options = { cache: 'no-store' };
-                if (controller) options.signal = controller.signal;
-                const response = await fetch(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&t=${Date.now()}`, options);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (!Array.isArray(data)) throw new Error('Invalid vocabulary data');
-                return data;
-            } catch (error) {
-                requestError = error;
-            } finally {
-                if (timeoutId !== null) clearTimeout(timeoutId);
-            }
-            if (attempt === maxAttempts) throw requestError;
-            if (onRetry) onRetry(attempt + 1, maxAttempts);
-            await new Promise(resolve => setTimeout(resolve, attempt * 900));
-        }
+    async function loadSelectedDay(day, onRetry) {
+        const data = allVocaData || await StudyData.get(
+            `${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&day=${encodeURIComponent(day)}`,
+            { validate: Array.isArray, onRetry }
+        );
+        return data.filter(item => String(item.day) === day);
     }
 
     window.addEventListener('pagehide', saveTestProgress);
@@ -351,6 +341,7 @@
     }
 
     async function startTest() {
+        if (startingTest || testSessionActive) return;
         studentName = document.getElementById('student-name').value.trim();
         const enteredPw = document.getElementById('secret-pw').value;
         selectedDay = document.getElementById('day-select').value;
@@ -358,32 +349,41 @@
 
         if(!studentName) { alert("학생 이름을 입력해 주세요!"); return; }
         if(!enteredPw) { alert("비밀번호를 입력해 주세요!"); return; }
+        if(!selectedDay) { alert("학습할 Day 또는 과목을 선택해 주세요."); return; }
 
         const startBtn = document.getElementById('start-btn');
         const originalStartText = startBtn.innerText;
         startBtn.disabled = true;
-        startBtn.innerText = "비밀번호 확인 중...";
-
-        const passwordOk = await checkVocaPassword(enteredPw, selectedDay);
-
-        startBtn.disabled = false;
-        startBtn.innerText = originalStartText;
-
-        if(passwordOk === null) {
+        startBtn.innerText = "시험 준비 중...";
+        startingTest = true;
+        const controls = ['student-name', 'secret-pw', 'day-select', 'range-select'].map(id => document.getElementById(id));
+        controls.forEach(control => { control.disabled = true; });
+        let dayWords;
+        try {
+            const passwordResult = await checkVocaPassword(enteredPw, selectedDay);
+            if (passwordResult === null) return;
+            if (!passwordResult.ok) {
+                alert("❌ 비밀번호가 틀렸습니다. 학원/선생님께 문의하세요.");
+                document.getElementById('secret-pw').value = "";
+                return;
+            }
+            saveStudentName(studentName);
+            saveVocaPassword(enteredPw);
+            startBtn.innerText = "선택한 단어를 불러오는 중...";
+            dayWords = Array.isArray(passwordResult.words)
+                ? passwordResult.words.filter(item => String(item.day) === selectedDay)
+                : await loadSelectedDay(selectedDay, (attempt, maxAttempts) => {
+                    startBtn.innerText = `단어 다시 불러오는 중... (${attempt}/${maxAttempts})`;
+                });
+        } catch (error) {
+            alert("선택한 단어를 불러오지 못했습니다. 시험 시작하기를 다시 눌러 주세요.");
             return;
+        } finally {
+            startingTest = false;
+            startBtn.disabled = false;
+            startBtn.innerText = originalStartText;
+            controls.forEach(control => { control.disabled = false; });
         }
-
-        if(!passwordOk) {
-            alert("❌ 비밀번호가 틀렸습니다. 학원/선생님께 문의하세요.");
-            document.getElementById('secret-pw').value = ""; 
-            document.getElementById('secret-pw').focus();
-            return; 
-        }
-
-        saveStudentName(studentName);
-        saveVocaPassword(enteredPw);
-
-        let dayWords = allVocaData.filter(item => item.day === selectedDay);
         let midPoint = Math.ceil(dayWords.length / 2); 
         
         let rawData = [];
@@ -442,18 +442,26 @@
         formData.append('subject', subjectType);
         formData.append('day', day);
         formData.append('password', password);
+        if (allVocaData === null) formData.append('includeWords', 'true');
 
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 15000) : null;
         try {
             const res = await fetch(scriptURL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData.toString()
+                body: formData.toString(),
+                ...(controller ? { signal: controller.signal } : {})
             });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            return data && data.ok === true;
+            if (!data || typeof data.ok !== 'boolean') throw new Error('Invalid password response');
+            return data;
         } catch (err) {
             alert("비밀번호 확인에 실패했습니다. 인터넷 연결을 확인해 주세요.");
             return null;
+        } finally {
+            if (timeoutId !== null) clearTimeout(timeoutId);
         }
     }
 

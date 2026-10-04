@@ -132,6 +132,7 @@
         </div>
     </main>
 
+    <script src="study-data.js?v=20261004"></script>
     <script>
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
         const MIN_WORD_GAP = 4;
@@ -170,8 +171,11 @@
             const loading = document.getElementById('loading');
             const url = `${scriptURL}?action=getPassage&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
 
-            fetchJsonWithRetry(url, 3, 20000, (nextAttempt, maxAttempts) => {
-                loading.innerText = `연결이 불안정해 지문을 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
+            StudyData.get(url, {
+                validate: data => data && typeof data.passage === 'string' && data.passage.trim(),
+                onRetry: (nextAttempt, maxAttempts) => {
+                    loading.innerText = `연결이 불안정해 지문을 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
+                }
             })
             .then(data => {
                 passageHtml = normalizePassageTags(data && data.passage);
@@ -192,36 +196,8 @@
                     ? '이 지문에는 밑줄 친 빈칸 항목이 없습니다.<br>PassageTexts의 외울 표현에 밑줄을 친 뒤 다시 시작해 주세요.'
                     : '지문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
                 loading.className = 'error-card';
-                loading.innerHTML = message;
+                loading.innerHTML = message + '<br><button type="button" onclick="location.reload()">다시 불러오기</button>';
             });
-        }
-
-        function fetchJsonWithRetry(url, maxAttempts, timeoutMs, onRetry) {
-            let attempt = 0;
-
-            function request() {
-                attempt++;
-                const controller = typeof AbortController === 'function' ? new AbortController() : null;
-                const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
-                const options = { cache: 'no-store' };
-                if (controller) options.signal = controller.signal;
-
-                return fetch(url, options)
-                    .then(response => {
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        return response.json();
-                    })
-                    .finally(() => {
-                        if (timeoutId) clearTimeout(timeoutId);
-                    })
-                    .catch(error => {
-                        if (attempt >= maxAttempts) throw error;
-                        if (onRetry) onRetry(attempt + 1, maxAttempts);
-                        return new Promise(resolve => setTimeout(resolve, attempt * 900)).then(request);
-                    });
-            }
-
-            return request();
         }
 
         function hasValidMemorizeAccess() {

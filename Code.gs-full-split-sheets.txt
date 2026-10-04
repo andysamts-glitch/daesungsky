@@ -87,9 +87,9 @@ function checkVocaPassword_(e) {
   var exactPassword = null;
   var defaultPassword = null;
 
-  if (sheet) {
-    var rows = sheet.getDataRange().getValues();
-    for (var i = 1; i < rows.length; i++) {
+  if (sheet && sheet.getLastRow() > 1) {
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    for (var i = 0; i < rows.length; i++) {
       var rowSubject = String(rows[i][0] || "").trim();
       var rowDay = String(rows[i][1] || "").trim();
       var rowPassword = String(rows[i][2] || "");
@@ -109,9 +109,14 @@ function checkVocaPassword_(e) {
 
   var correctPassword = exactPassword !== null ? exactPassword : defaultPassword;
   var ok = correctPassword !== null && password === correctPassword;
+  var result = { ok: ok };
+  // Send only the chosen Day with a successful password check, saving a round trip.
+  if (ok && day && e.parameter.includeWords === "true") {
+    result.words = JSON.parse(getVocaJson_({ subject: subject, day: String(e.parameter.day || "") }, ss));
+  }
 
   return ContentService
-    .createTextOutput(JSON.stringify({ ok: ok }))
+    .createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -1206,36 +1211,8 @@ function doGet(e) {
 
   // 단어: 과목별로 나눈 시트만 읽기
   if (e.parameter.action === "getVoca") {
-    var targetSubject = String(e.parameter.subject || "").trim();
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var vocaSheetName = getVocaSheetName_(targetSubject);
-    var vocaSheet = ss.getSheetByName(vocaSheetName) || ss.getSheetByName("Voca");
-    var usingFallbackVocaSheet = vocaSheet && vocaSheet.getName() === "Voca";
-    var vocaResult = [];
-
-    if (vocaSheet) {
-      var vocaRows = vocaSheet.getDataRange().getValues();
-      for (var i = 1; i < vocaRows.length; i++) {
-        var rowSubject = String(vocaRows[i][0] || "").trim();
-        var rowDay = vocaRows[i][1];
-        if (rowDay && (!targetSubject || !usingFallbackVocaSheet || rowSubject === targetSubject)) {
-          vocaResult.push({
-            subject: String(vocaRows[i][0] || targetSubject),
-            day: String(vocaRows[i][1]),
-            num: Number(vocaRows[i][2]),
-            question: String(vocaRows[i][3]),
-            answer: String(vocaRows[i][4]),
-            w1: String(vocaRows[i][5]),
-            w2: String(vocaRows[i][6]),
-            w3: String(vocaRows[i][7]),
-            questionType: String(vocaRows[i][8] || "")
-          });
-        }
-      }
-    }
-
     return ContentService
-      .createTextOutput(JSON.stringify(vocaResult))
+      .createTextOutput(getVocaJson_(e.parameter))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -1245,10 +1222,8 @@ function doGet(e) {
     var targetGrade = normalizeGradeName_(e.parameter.grade);
     var targetSubject = String(e.parameter.subject || "").trim();
     var result = { passage: "", questions: [] };
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var cache = CacheService.getScriptCache();
     var cacheKey = "quiz_v2:" + targetGrade + ":" + targetSubject + ":" + targetSet + ":quiz";
-    var cachedQuiz = cache.get(cacheKey);
+    var cachedQuiz = readStudyCache_(cacheKey);
 
     if (cachedQuiz) {
       return ContentService
@@ -1256,15 +1231,14 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     result.passage = getQuizPassage_(ss, targetSet, targetGrade, targetSubject, "quiz");
     if (!(targetGrade === "TOEFL" && targetSubject === "작문연습")) {
       result.questions = getQuizQuestions_(ss, targetSet, targetGrade);
     }
 
     var quizJson = JSON.stringify(result);
-    if (quizJson.length < 90000) {
-      cache.put(cacheKey, quizJson, 300);
-    }
+    writeStudyCache_(cacheKey, quizJson);
 
     return ContentService
       .createTextOutput(quizJson)
@@ -1276,9 +1250,8 @@ function doGet(e) {
     var passageSet = String(e.parameter.set || "");
     var passageGrade = normalizeGradeName_(e.parameter.grade);
     var passageSubject = String(e.parameter.subject || "").trim();
-    var passageCache = CacheService.getScriptCache();
     var passageCacheKey = "passage:" + passageGrade + ":" + passageSubject + ":" + passageSet + ":memorize";
-    var cachedPassage = passageCache.get(passageCacheKey);
+    var cachedPassage = readStudyCache_(passageCacheKey);
 
     if (cachedPassage) {
       return ContentService
@@ -1296,9 +1269,7 @@ function doGet(e) {
       )
     });
 
-    if (passageJson.length < 90000) {
-      passageCache.put(passageCacheKey, passageJson, 300);
-    }
+    writeStudyCache_(passageCacheKey, passageJson);
 
     return ContentService
       .createTextOutput(passageJson)
@@ -1311,10 +1282,105 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function readStudyCache_(key) {
+  try {
+    return key.length <= 250 ? CacheService.getScriptCache().get(key) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeStudyCache_(key, json) {
+  try {
+    // Cache limits are bytes, not characters; Korean text can use three bytes each.
+    if (key.length <= 250 && json.length < 90000 && Utilities.newBlob(json).getBytes().length < 90000) {
+      CacheService.getScriptCache().put(key, json, 120);
+    }
+  } catch (error) {
+    // A cache quota or service failure must not discard successfully loaded data.
+  }
+}
+
+function getVocaJson_(params, spreadsheet) {
+  var subject = String(params.subject || "").trim();
+  var day = String(params.day || "");
+  var daysOnly = params.view === "days";
+  var cacheKey = "voca_v2:" + JSON.stringify([subject, daysOnly ? "days" : "words", daysOnly ? "" : day]);
+  var cached = readStudyCache_(cacheKey);
+  if (cached) return cached;
+
+  var ss = spreadsheet || SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(getVocaSheetName_(subject)) || ss.getSheetByName("Voca");
+  var fallback = sheet && sheet.getName() === "Voca";
+  var result = daysOnly ? { mode: "days", version: 2, days: [] } : [];
+  var lastRow = sheet ? sheet.getLastRow() : 0;
+  if (lastRow > 1) {
+    if (daysOnly) {
+      var counts = Object.create(null);
+      sheet.getRange(2, 1, lastRow - 1, 2).getValues().forEach(function(row) {
+        if (!row[1] || (fallback && subject && String(row[0] || "").trim() !== subject)) return;
+        var key = String(row[1]);
+        if (!counts[key]) {
+          counts[key] = { day: key, count: 0 };
+          result.days.push(counts[key]);
+        }
+        counts[key].count++;
+      });
+    } else {
+      var rows;
+      if (day) {
+        var dayRows = [];
+        // Compare raw values, just like the catalog, even when numeric Days have custom formatting.
+        sheet.getRange(2, 2, lastRow - 1, 1).getValues().forEach(function(row, index) {
+          if (String(row[0]) === day) dayRows.push(index + 2);
+        });
+        rows = getMatchedStudyRows_(sheet, dayRows, 9);
+      } else {
+        // Older pages still receive the original full array.
+        rows = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+      }
+      rows.forEach(function(row) {
+        if (!row[1] || (day && String(row[1]) !== day)) return;
+        if (fallback && subject && String(row[0] || "").trim() !== subject) return;
+        result.push({
+          subject: String(row[0] || subject), day: String(row[1]), num: Number(row[2]),
+          question: String(row[3] || ""), answer: String(row[4] || ""),
+          w1: String(row[5] || ""), w2: String(row[6] || ""), w3: String(row[7] || ""),
+          questionType: String(row[8] || "")
+        });
+      });
+    }
+  }
+  var json = JSON.stringify(result);
+  writeStudyCache_(cacheKey, json);
+  return json;
+}
+
+function getMatchedStudyRows_(sheet, matchedRows, width) {
+  var rowNumbers = matchedRows.slice().sort(function(a, b) { return a - b; });
+  if (!rowNumbers.length) return [];
+  var blocks = [];
+  rowNumbers.forEach(function(row) {
+    var last = blocks[blocks.length - 1];
+    if (last && last.end + 1 === row) last.end = row;
+    else blocks.push({ start: row, end: row });
+  });
+  // Interleaved Days/sets must not create hundreds of spreadsheet service calls.
+  if (blocks.length > 8) {
+    var start = rowNumbers[0];
+    var values = sheet.getRange(start, 1, rowNumbers[rowNumbers.length - 1] - start + 1, width).getValues();
+    return rowNumbers.map(function(row) { return values[row - start]; });
+  }
+  var rows = [];
+  blocks.forEach(function(block) {
+    rows = rows.concat(sheet.getRange(block.start, 1, block.end - block.start + 1, width).getValues());
+  });
+  return rows;
+}
+
 function getPassageListJson_() {
-  var cache = CacheService.getScriptCache();
   var cacheKey = "passageList_v1";
-  var cached = cache.get(cacheKey);
+  var cached = readStudyCache_(cacheKey);
   if (cached) return cached;
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Passages");
@@ -1338,9 +1404,7 @@ function getPassageListJson_() {
 
   var json = JSON.stringify(dataList);
   // 새 항목을 시트에 직접 추가해도 오래 기다리지 않도록 2분만 보관한다.
-  if (json.length < 90000) {
-    cache.put(cacheKey, json, 120);
-  }
+  writeStudyCache_(cacheKey, json);
   return json;
 }
 
@@ -1657,22 +1721,11 @@ function getQuizQuestions_(ss, targetSet, targetGrade) {
     .createTextFinder(targetSet)
     .matchEntireCell(true)
     .findAll()
-    .sort(function(a, b) {
-      return a.getRow() - b.getRow();
+    .map(function(match) {
+      return match.getRow();
     });
 
-  // Fetch each consecutive block once, preserving sheet order and separated blocks.
-  var questionRows = [];
-  for (var i = 0; i < setMatches.length;) {
-    var startRow = setMatches[i].getRow();
-    var endRow = startRow;
-    i++;
-    while (i < setMatches.length && setMatches[i].getRow() === endRow + 1) {
-      endRow++;
-      i++;
-    }
-    questionRows = questionRows.concat(qSheet.getRange(startRow, 1, endRow - startRow + 1, 9).getValues());
-  }
+  var questionRows = getMatchedStudyRows_(qSheet, setMatches, 9);
 
   questionRows.forEach(function(row) {
     questions.push({
