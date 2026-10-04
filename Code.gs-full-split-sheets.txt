@@ -1,5 +1,8 @@
 // Google Apps Script final version for split sheets.
 // Replace the whole current Code.gs with this code.
+// Writing prompt revision: 2026-10-04.1
+
+var WRITING_PROMPT_VERSION = "2026-10-04.1";
 
 var MIDDLE_RESULT_EMAIL = "coconanwon@gmail.com"; // 중등부 결과를 받을 이메일 주소
 var WORD_CHAIN_SOURCE_SHEETS = ["Voca_토플", "Voca_토익"];
@@ -1177,6 +1180,19 @@ function writingResultJson_(data) {
 
 
 function doGet(e) {
+  // Read-only deployment check; never expose a student response or the full prompt.
+  if (e.parameter.action === "getWritingPromptInfo") {
+    var prompt = getWritingCorrectionPrompt_();
+    var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prompt, Utilities.Charset.UTF_8);
+    var hash = digest.map(function(value) {
+      return ("0" + ((value + 256) % 256).toString(16)).slice(-2);
+    }).join("");
+    return ContentService.createTextOutput(JSON.stringify({
+      version: WRITING_PROMPT_VERSION,
+      sha256: hash
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (e.parameter.action === "getWordChain") {
     return getWordChain_(e);
   }
