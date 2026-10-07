@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/study-list.mjs": {
+      "maxDuration": 30
+    }
+  }
+}
