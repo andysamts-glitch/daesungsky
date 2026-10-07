@@ -222,7 +222,7 @@
         </div>
     </div>
 
-    <script src="study-data.js?v=20261004"></script>
+    <script src="study-data.js?v=20261007"></script>
     <script>
         //
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -245,11 +245,11 @@
             { name: "SAT", grades: ["SAT"] }
         ];
 
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('student-name').value = getSavedStudentName();
             const categoryDiv = document.getElementById('category-btns');
             loadCategoryData(categoryDiv);
-        }
+        }, { once: true });
 
         function getSavedStudentName() {
             try {
@@ -290,6 +290,9 @@
         function loadCategoryData(categoryDiv) {
             StudyData.get(scriptURL, {
                 validate: Array.isArray,
+                onWaiting: () => {
+                    categoryDiv.innerHTML = '<p style="grid-column: span 2;">응답이 늦어지고 있습니다. 잠시만 기다려 주세요.</p>';
+                },
                 onRetry: (nextAttempt, maxAttempts) => {
                     categoryDiv.innerHTML = `<p style="grid-column: span 2;">연결이 불안정해 데이터를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})</p>`;
                 }

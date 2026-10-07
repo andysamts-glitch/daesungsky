@@ -120,7 +120,7 @@
     </div>
 </div>
 
-<script src="study-data.js?v=20261004"></script>
+<script src="study-data.js?v=20261007"></script>
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
     const VOCA_SESSION_PREFIX = 'dsskyVocaTestSession_v1:';
@@ -139,7 +139,7 @@
     let autoAdvanceTimer = null;
     let testSessionActive = false;
 
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         let typeParam = urlParams.get('type');
 
@@ -162,7 +162,7 @@
         if (restoreSavedTest()) return;
 
         loadVocaData();
-    };
+    }, { once: true });
 
     function loadVocaData() {
         const startButton = document.getElementById('start-btn');
@@ -178,6 +178,10 @@
 
         return StudyData.get(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&view=days`, {
             validate: data => Array.isArray(data) || (data && data.mode === 'days' && Array.isArray(data.days)),
+            onWaiting: () => {
+                status.textContent = '단어 목록 응답이 늦어지고 있습니다. 잠시만 기다려 주세요.';
+                status.classList.remove('hidden');
+            },
             onRetry: (attempt, maxAttempts) => {
                 status.textContent = `연결이 불안정해 단어를 다시 불러오는 중입니다... (${attempt}/${maxAttempts})`;
                 status.classList.remove('hidden');
@@ -445,7 +449,10 @@
         if (allVocaData === null) formData.append('includeWords', 'true');
 
         const controller = typeof AbortController === 'function' ? new AbortController() : null;
-        const timeoutId = controller ? setTimeout(() => controller.abort(), 15000) : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 30000) : null;
+        const waitingId = setTimeout(() => {
+            document.getElementById('start-btn').innerText = '응답을 기다리고 있습니다...';
+        }, 8000);
         try {
             const res = await fetch(scriptURL, {
                 method: 'POST',
@@ -462,6 +469,7 @@
             return null;
         } finally {
             if (timeoutId !== null) clearTimeout(timeoutId);
+            clearTimeout(waitingId);
         }
     }
 

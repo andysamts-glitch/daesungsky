@@ -41,9 +41,18 @@
 
     async function fetchJson(key, options) {
         const attempts = 2;
+        const deadline = Date.now() + 30000;
+        function timeoutError() {
+            const error = new Error('Data request timed out');
+            error.name = 'TimeoutError';
+            return error;
+        }
         for (let attempt = 1; attempt <= attempts; attempt++) {
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) throw timeoutError();
             const controller = typeof AbortController === 'function' ? new AbortController() : null;
             let timer;
+            let waitingTimer;
             try {
                 const url = new URL(key);
                 url.searchParams.set('t', Date.now());
@@ -56,19 +65,22 @@
                 });
                 const timeout = new Promise((resolve, reject) => {
                     timer = setTimeout(() => {
+                        reject(timeoutError());
                         if (controller) controller.abort();
-                        reject(new Error('Data request timed out'));
-                    }, 15000);
+                    }, remaining);
                 });
+                if (options.onWaiting) waitingTimer = setTimeout(options.onWaiting, 8000);
                 const data = await Promise.race([request, timeout]);
                 if (!options.validate(data)) throw new Error('Invalid study data');
                 const json = JSON.stringify(data);
                 remember(key, json);
                 return json;
             } catch (error) {
-                if (attempt === attempts) throw error;
+                // A slow successful response must not be restarted at the old 15-second cutoff.
+                if (attempt === attempts || error.name === 'TimeoutError' || Date.now() >= deadline) throw error;
             } finally {
                 clearTimeout(timer);
+                clearTimeout(waitingTimer);
             }
             if (options.onRetry) options.onRetry(attempt + 1, attempts);
             await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400));

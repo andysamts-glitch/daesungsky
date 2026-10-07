@@ -220,7 +220,7 @@
     </div>
 </div>
 
-<script src="study-data.js?v=20261004"></script>
+<script src="study-data.js?v=20261007"></script>
 <script>
     // 🌟 선생님의 고유 스크립트 주소
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -243,7 +243,7 @@
     let spellingQuestionByNumber = {};
     let activeSpellingBlankNumber = null;
 
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         problemSet = urlParams.get('problem') || "";
         studentName = urlParams.get('student') || "";
@@ -275,6 +275,9 @@
         StudyData.get(quizUrl, {
             validate: data => data && Array.isArray(data.questions) &&
                 (!isWritingPractice() || (typeof data.passage === 'string' && data.passage.trim())),
+            onWaiting: () => {
+                loading.innerText = '문제 응답이 늦어지고 있습니다. 잠시만 기다려 주세요.';
+            },
             onRetry: (nextAttempt, maxAttempts) => {
                 loading.innerText = `연결이 불안정해 문제를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
             }
@@ -326,7 +329,7 @@
             loading.classList.remove('hidden');
             loading.innerHTML = '<p>문제를 불러오지 못했습니다. 다시 시도해 주세요.</p><button type="button" class="submit-btn" style="width: auto;" onclick="location.reload()">다시 불러오기</button>';
         });
-    };
+    }, { once: true });
 
     function isWritingPractice() {
         const subject = String(selectedSubject || "").trim();

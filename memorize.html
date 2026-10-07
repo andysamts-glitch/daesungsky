@@ -132,7 +132,7 @@
         </div>
     </main>
 
-    <script src="study-data.js?v=20261004"></script>
+    <script src="study-data.js?v=20261007"></script>
     <script>
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
         const MIN_WORD_GAP = 4;
@@ -150,7 +150,7 @@
         let testSaved = false;
         let studyWordGap = 5;
 
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
             const params = new URLSearchParams(location.search);
             problemSet = params.get('problem') || '';
             studentName = params.get('student') || '';
@@ -165,7 +165,7 @@
 
             document.getElementById('page-title').innerText = `${problemSet} 빈칸 채우기`;
             loadPassage();
-        };
+        }, { once: true });
 
         function loadPassage() {
             const loading = document.getElementById('loading');
@@ -173,6 +173,9 @@
 
             StudyData.get(url, {
                 validate: data => data && typeof data.passage === 'string' && data.passage.trim(),
+                onWaiting: () => {
+                    loading.innerText = '지문 응답이 늦어지고 있습니다. 잠시만 기다려 주세요.';
+                },
                 onRetry: (nextAttempt, maxAttempts) => {
                     loading.innerText = `연결이 불안정해 지문을 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
                 }
