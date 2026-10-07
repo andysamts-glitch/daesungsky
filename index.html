@@ -222,7 +222,8 @@
         </div>
     </div>
 
-    <script src="study-data.js?v=20261007"></script>
+    <script src="study-data.js?v=20261007-list1"></script>
+    <script src="study-lists.js?v=20261007-list1"></script>
     <script>
         //
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -235,6 +236,8 @@
         let selectedSubject = "";
         let selectedProblem = "";
         let selectedPassword = "";
+        let selectedPasswordRequiresLookup = false;
+        let passwordCheckPending = false;
         let selectedLearningMode = "quiz";
         let step3BackTarget = "step2";
 
@@ -288,7 +291,7 @@
         }
 
         function loadCategoryData(categoryDiv) {
-            StudyData.get(scriptURL, {
+            (window.StudyLists || StudyData).get(scriptURL, {
                 validate: Array.isArray,
                 onWaiting: () => {
                     categoryDiv.innerHTML = '<p style="grid-column: span 2;">응답이 늦어지고 있습니다. 잠시만 기다려 주세요.</p>';
@@ -318,6 +321,7 @@
                     db[item.grade][item.subject].push({
                         set: String(item.set || '').trim(),
                         password: String(item.password || '').trim() || fallbackPasswords[key] || '',
+                        requiresPasswordLookup: !Object.prototype.hasOwnProperty.call(item, 'password'),
                         learningType: normalizeLearningType(item.learningType)
                     });
                 });
@@ -438,6 +442,7 @@
             const problem = db[selectedGrade][selectedSubject][index];
             selectedProblem = problem.set;
             selectedPassword = problem.password;
+            selectedPasswordRequiresLookup = problem.requiresPasswordLookup;
             selectedLearningMode = mode || 'quiz';
             showPasswordScreen('step4');
         }
@@ -487,10 +492,11 @@
             goBack('step5', 'step4');
         }
 
-        function checkPassword() {
+        async function checkPassword() {
+            if (passwordCheckPending) return;
             const studentName = document.getElementById('student-name').value.trim();
             const pwd = document.getElementById('password-input').value;
-            const realPassword = selectedPassword;
+            let realPassword = selectedPassword;
 
             if(!studentName) {
                 alert("학생 이름을 입력해 주세요!");
@@ -498,26 +504,61 @@
                 return;
             }
 
-            if(pwd === realPassword) {
-                saveStudentName(studentName);
-                savePassword(pwd);
-                const params = new URLSearchParams({
-                    problem: selectedProblem,
-                    student: studentName,
-                    grade: selectedGrade,
-                    subject: selectedSubject
-                });
-                sessionStorage.setItem('dsskyQuizAccess', JSON.stringify({
-                    problem: selectedProblem,
-                    student: studentName,
-                    grade: selectedGrade,
-                    subject: selectedSubject,
-                    learningMode: selectedLearningMode,
-                    createdAt: Date.now()
-                }));
-                window.location.href = (selectedLearningMode === 'memorize' ? "memorize.html?" : "quiz.html?") + params.toString();
-            } else {
-                alert("암호가 틀렸습니다. 다시 확인해 주세요!");
+            const startButton = document.getElementById('start-learning-btn');
+            const buttonText = startButton.innerText;
+            const controls = [...document.querySelectorAll('#step5 button, #step5 input')];
+            const disabledStates = controls.map(control => control.disabled);
+            passwordCheckPending = true;
+            controls.forEach(control => { control.disabled = true; });
+            try {
+                if (selectedPasswordRequiresLookup) {
+                    startButton.innerText = '암호 확인 중...';
+                    // Passwords are never taken from the shared server list cache.
+                    const rows = await StudyData.get(scriptURL, {
+                        force: true,
+                        validate: Array.isArray,
+                        onWaiting: () => { startButton.innerText = '암호 확인 응답을 기다리고 있습니다...'; }
+                    });
+                    const matches = rows.filter(row => row && row.grade === selectedGrade && row.subject === selectedSubject &&
+                        String(row.set || '').trim() === selectedProblem);
+                    const modeExists = matches.some(row => {
+                        const type = normalizeLearningType(row.learningType);
+                        return !isSchoolExamGrade(selectedGrade) || type === '둘다' ||
+                            (selectedLearningMode === 'memorize' ? type === '빈칸' : type === '문제');
+                    });
+                    if (!modeExists || !matches.every(row => typeof row.password === 'string')) {
+                        throw new Error('Unavailable password');
+                    }
+                    realPassword = matches.map(row => row.password.trim()).find(Boolean) || '';
+                }
+
+                if(pwd === realPassword) {
+                    saveStudentName(studentName);
+                    savePassword(pwd);
+                    const params = new URLSearchParams({
+                        problem: selectedProblem,
+                        student: studentName,
+                        grade: selectedGrade,
+                        subject: selectedSubject
+                    });
+                    sessionStorage.setItem('dsskyQuizAccess', JSON.stringify({
+                        problem: selectedProblem,
+                        student: studentName,
+                        grade: selectedGrade,
+                        subject: selectedSubject,
+                        learningMode: selectedLearningMode,
+                        createdAt: Date.now()
+                    }));
+                    window.location.href = (selectedLearningMode === 'memorize' ? "memorize.html?" : "quiz.html?") + params.toString();
+                } else {
+                    alert("암호가 틀렸습니다. 다시 확인해 주세요!");
+                }
+            } catch (_) {
+                alert('암호를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+            } finally {
+                passwordCheckPending = false;
+                controls.forEach((control, index) => { control.disabled = disabledStates[index]; });
+                startButton.innerText = buttonText;
             }
         }
 

@@ -120,7 +120,8 @@
     </div>
 </div>
 
-<script src="study-data.js?v=20261007"></script>
+<script src="study-data.js?v=20261007-list1"></script>
+<script src="study-lists.js?v=20261007-list1"></script>
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
     const VOCA_SESSION_PREFIX = 'dsskyVocaTestSession_v1:';
@@ -176,7 +177,7 @@
         status.classList.add('hidden');
         daySelect.innerHTML = '<option value="">데이터를 불러오는 중입니다...</option>';
 
-        return StudyData.get(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&view=days`, {
+        return (window.StudyLists || StudyData).get(`${scriptURL}?action=getVoca&subject=${encodeURIComponent(subjectType)}&view=days`, {
             validate: data => Array.isArray(data) || (data && data.mode === 'days' && Array.isArray(data.days)),
             onWaiting: () => {
                 status.textContent = '단어 목록 응답이 늦어지고 있습니다. 잠시만 기다려 주세요.';

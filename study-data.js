@@ -41,7 +41,8 @@
 
     async function fetchJson(key, options) {
         const attempts = 2;
-        const deadline = Date.now() + 30000;
+        const budget = Number.isFinite(options.timeoutMs) ? Math.max(1, Math.min(options.timeoutMs, 30000)) : 30000;
+        const deadline = Date.now() + budget;
         function timeoutError() {
             const error = new Error('Data request timed out');
             error.name = 'TimeoutError';
