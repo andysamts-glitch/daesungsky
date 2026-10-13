@@ -344,22 +344,26 @@
         const isEmail = /이메일|e-?mail/.test(writingSource);
         let targetLevel = "Intermediate";
 
-        if (/초급|beginner/.test(lowerSetName)) targetLevel = "Beginner";
-        if (/상급|advanced/.test(lowerSetName)) targetLevel = "Advanced";
+        if (/중상급|upper[\s_-]*intermediate/.test(lowerSetName)) {
+            targetLevel = "Upper-Intermediate";
+        } else if (/상급|advanced/.test(lowerSetName)) {
+            targetLevel = "Advanced";
+        } else if (/초급|beginner/.test(lowerSetName)) {
+            targetLevel = "Beginner";
+        }
+
+        const wordGoals = isEmail
+            ? { Beginner: [80, 100], Intermediate: [100, 120], "Upper-Intermediate": [105, 125], Advanced: [110, 130] }
+            : { Beginner: [100, 115], Intermediate: [110, 130], "Upper-Intermediate": [120, 140], Advanced: [130, 150] };
+        const [wordGoalMin, wordGoalMax] = wordGoals[targetLevel];
 
         return {
             type: isEmail ? "Write an Email" : "Academic Discussion",
             timeLimitSeconds: isEmail ? 7 * 60 : 10 * 60,
             targetLevel: targetLevel,
-            wordGoalMin: isEmail
-                ? ({ Beginner: 80, Intermediate: 100, Advanced: 110 }[targetLevel])
-                : 100,
-            wordGoalMax: isEmail
-                ? ({ Beginner: 100, Intermediate: 120, Advanced: 130 }[targetLevel])
-                : null,
-            goalText: isEmail
-                ? `권장 분량: ${({ Beginner: 80, Intermediate: 100, Advanced: 110 }[targetLevel])}-${({ Beginner: 100, Intermediate: 120, Advanced: 130 }[targetLevel])} words`
-                : "최소 분량: 100 words"
+            wordGoalMin,
+            wordGoalMax,
+            goalText: `권장 분량: ${wordGoalMin}-${wordGoalMax} words`
         };
     }
 
