@@ -12,7 +12,8 @@ export function sanitizeList(kind, input) {
             }
             // Never copy passwords, student records, or unexpected upstream fields.
             return { grade: row.grade, subject: row.subject, set: row.set,
-                learningType: String(row.learningType || '') };
+                learningType: String(row.learningType || ''),
+                ...(row.supportsPassageStart === true ? { supportsPassageStart: true } : {}) };
         });
     }
     let days;
@@ -138,7 +139,7 @@ export function createListHandler({ cache, waitUntil = () => {}, fetchImpl = fet
             return send(400, { error: 'Invalid list request' });
         }
         // Fixed endpoints and seven bounded keys: this cannot proxy arbitrary URLs or actions.
-        const key = `dssky-study-list-v1:${kind}:${subject}`;
+        const key = `dssky-study-list-${kind === 'catalog' ? 'v2' : 'v1'}:${kind}:${subject}`;
         try {
             const entry = await read(key, kind);
             if (entry) {

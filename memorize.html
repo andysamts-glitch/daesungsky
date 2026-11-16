@@ -171,7 +171,8 @@
             const loading = document.getElementById('loading');
             const url = `${scriptURL}?action=getPassage&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
 
-            StudyData.get(url, {
+            const preloaded = takePreloadedPassage();
+            const request = preloaded ? Promise.resolve({ passage: preloaded }) : StudyData.get(url, {
                 validate: data => data && typeof data.passage === 'string' && data.passage.trim(),
                 onWaiting: () => {
                     loading.innerText = '지문 응답이 늦어지고 있습니다. 잠시만 기다려 주세요.';
@@ -179,8 +180,8 @@
                 onRetry: (nextAttempt, maxAttempts) => {
                     loading.innerText = `연결이 불안정해 지문을 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
                 }
-            })
-            .then(data => {
+            });
+            request.then(data => {
                 passageHtml = normalizePassageTags(data && data.passage);
                 if (!passageHtml.trim()) throw new Error('Passage is missing');
 
@@ -201,6 +202,19 @@
                 loading.className = 'error-card';
                 loading.innerHTML = message + '<br><button type="button" onclick="location.reload()">다시 불러오기</button>';
             });
+        }
+
+        function takePreloadedPassage() {
+            try {
+                if (!hasValidMemorizeAccess()) return '';
+                const access = JSON.parse(sessionStorage.getItem('dsskyQuizAccess') || '');
+                const passage = typeof access.preloadedPassage === 'string' ? access.preloadedPassage : '';
+                delete access.preloadedPassage;
+                sessionStorage.setItem('dsskyQuizAccess', JSON.stringify(access));
+                return Date.now() - Number(access.createdAt || 0) <= 120000 ? passage : '';
+            } catch (_) {
+                return '';
+            }
         }
 
         function hasValidMemorizeAccess() {
