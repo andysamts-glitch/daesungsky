@@ -124,7 +124,7 @@
 <body>
 
     <div class="container">
-        <img src="작은로고.jpg" alt="대성 SKY 학원 로고" class="logo">
+        <img src="academy-logo-378.webp" width="300" height="300" alt="대성 SKY 학원 로고" class="logo">
         
         <div class="contact-area">
             <p class="contact-phone">상담 문의: <a class="contact-link" href="tel:03-3351-3629">03-3351-3629</a></p>
@@ -222,8 +222,8 @@
         </div>
     </div>
 
-    <script src="study-data.js?v=20261007-list1"></script>
-    <script src="study-lists.js?v=20261007-list1"></script>
+    <script src="study-data.js?v=20261124"></script>
+    <script src="study-lists.js?v=20261124"></script>
     <script>
         //
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxLRohgJOLdKADjTIj_BVPrKtZb2LuQCK_qOQjkqfJFSmvEWgjKIqyFkphxbkAopSWyVw/exec';
@@ -238,6 +238,7 @@
         let selectedPassword = "";
         let selectedPasswordRequiresLookup = false;
         let selectedPassageStartSupported = false;
+        let selectedQuizStartSupported = false;
         let passwordCheckPending = false;
         let selectedLearningMode = "quiz";
         let step3BackTarget = "step2";
@@ -324,6 +325,7 @@
                         password: String(item.password || '').trim() || fallbackPasswords[key] || '',
                         requiresPasswordLookup: !Object.prototype.hasOwnProperty.call(item, 'password'),
                         supportsPassageStart: item.supportsPassageStart === true,
+                        supportsQuizStart: item.supportsQuizStart === true,
                         learningType: normalizeLearningType(item.learningType)
                     });
                 });
@@ -446,6 +448,7 @@
             selectedPassword = problem.password;
             selectedPasswordRequiresLookup = problem.requiresPasswordLookup;
             selectedPassageStartSupported = problem.supportsPassageStart === true;
+            selectedQuizStartSupported = problem.supportsQuizStart === true;
             selectedLearningMode = mode || 'quiz';
             showPasswordScreen('step4');
         }
@@ -501,6 +504,7 @@
             const pwd = document.getElementById('password-input').value;
             let realPassword = selectedPassword;
             let preloadedPassage = '';
+            let preloadedQuiz = null;
 
             if(!studentName) {
                 alert("학생 이름을 입력해 주세요!");
@@ -515,21 +519,24 @@
             passwordCheckPending = true;
             controls.forEach(control => { control.disabled = true; });
             try {
-                if (selectedLearningMode === 'memorize' && selectedPassageStartSupported) {
-                    startButton.innerText = '암호 확인 및 지문 불러오는 중...';
+                const memorize = selectedLearningMode === 'memorize';
+                if (memorize ? selectedPassageStartSupported : selectedQuizStartSupported) {
+                    startButton.innerText = memorize ? '암호 확인 및 지문 불러오는 중...' : '암호 확인 및 문제 불러오는 중...';
                     const result = await requestPassageStart(pwd, startButton);
                     if (!result.ok) {
                         alert(result.error === 'passage_missing'
                             ? '연결된 지문이 없습니다. 선생님께 문의해 주세요.'
-                            : '암호가 틀렸거나 해당 빈칸 문제가 변경되었습니다. 다시 확인해 주세요.');
+                            : '암호가 틀렸거나 해당 문제가 변경되었습니다. 다시 확인해 주세요.');
                         return;
                     }
-                    preloadedPassage = result.passage;
+                    if (memorize) preloadedPassage = result.passage;
+                    else preloadedQuiz = result.quiz;
                 } else if (selectedPasswordRequiresLookup) {
                     startButton.innerText = '암호 확인 중...';
                     // Passwords are never taken from the shared server list cache.
                     const rows = await StudyData.get(scriptURL, {
                         force: true,
+                        noStore: true,
                         validate: Array.isArray,
                         onWaiting: () => { startButton.innerText = '암호 확인 응답을 기다리고 있습니다...'; }
                     });
@@ -546,7 +553,7 @@
                     realPassword = matches.map(row => row.password.trim()).find(Boolean) || '';
                 }
 
-                if(preloadedPassage || pwd === realPassword) {
+                if(preloadedQuiz || preloadedPassage || pwd === realPassword) {
                     saveStudentName(studentName);
                     savePassword(pwd);
                     const params = new URLSearchParams({
@@ -555,15 +562,21 @@
                         grade: selectedGrade,
                         subject: selectedSubject
                     });
-                    sessionStorage.setItem('dsskyQuizAccess', JSON.stringify({
+                    const access = {
                         problem: selectedProblem,
                         student: studentName,
                         grade: selectedGrade,
                         subject: selectedSubject,
                         learningMode: selectedLearningMode,
-                        createdAt: Date.now(),
-                        ...(preloadedPassage ? { preloadedPassage: preloadedPassage } : {})
-                    }));
+                        createdAt: Date.now()
+                    };
+                    try {
+                        sessionStorage.setItem('dsskyQuizAccess', JSON.stringify({ ...access,
+                            ...(preloadedPassage ? { preloadedPassage } : {}),
+                            ...(preloadedQuiz ? { preloadedQuiz } : {}) }));
+                    } catch (_) {
+                        sessionStorage.setItem('dsskyQuizAccess', JSON.stringify(access));
+                    }
                     window.location.href = (selectedLearningMode === 'memorize' ? "memorize.html?" : "quiz.html?") + params.toString();
                 } else {
                     alert("암호가 틀렸습니다. 다시 확인해 주세요!");
@@ -581,11 +594,11 @@
             const controller = typeof AbortController === 'function' ? new AbortController() : null;
             let timeoutId;
             const waitingId = setTimeout(() => {
-                startButton.innerText = '암호와 지문 응답을 기다리고 있습니다...';
+                startButton.innerText = '시험 응답을 기다리고 있습니다...';
             }, 8000);
             try {
                 const body = new URLSearchParams({
-                    action: 'checkVocaPassword', studyMode: 'memorize',
+                    action: 'checkVocaPassword', studyMode: selectedLearningMode,
                     grade: selectedGrade, subject: selectedSubject, set: selectedProblem, password
                 });
                 const request = fetch(scriptURL, {
@@ -603,11 +616,14 @@
                     }, 30000);
                 });
                 const result = await Promise.race([request, timeout]);
-                if (!result || result.passageStartVersion !== 1 || typeof result.ok !== 'boolean') {
+                const memorize = selectedLearningMode === 'memorize';
+                if (!result || (memorize ? result.passageStartVersion : result.quizStartVersion) !== 1 || typeof result.ok !== 'boolean') {
                     throw new Error('Unsupported passage start response');
                 }
                 if (result.ok && (result.grade !== selectedGrade || result.subject !== selectedSubject
-                    || result.set !== selectedProblem || typeof result.passage !== 'string' || !result.passage.trim())) {
+                    || result.set !== selectedProblem || (memorize
+                        ? typeof result.passage !== 'string' || !result.passage.trim()
+                        : !result.quiz || typeof result.quiz.passage !== 'string' || !Array.isArray(result.quiz.questions)))) {
                     throw new Error('Invalid passage response');
                 }
                 return result;

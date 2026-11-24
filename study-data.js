@@ -74,7 +74,7 @@
                 const data = await Promise.race([request, timeout]);
                 if (!options.validate(data)) throw new Error('Invalid study data');
                 const json = JSON.stringify(data);
-                remember(key, json);
+                if (!options.noStore) remember(key, json);
                 return json;
             } catch (error) {
                 // A slow successful response must not be restarted at the old 15-second cutoff.
@@ -92,7 +92,7 @@
         async get(url, options) {
             const key = requestKey(url);
             const entry = entries[key];
-            if (!options.force && entry && entry.expires > Date.now()) {
+            if (!options.force && !options.noStore && entry && entry.expires > Date.now()) {
                 try {
                     const data = JSON.parse(entry.json);
                     if (options.validate(data)) return data;

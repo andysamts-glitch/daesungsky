@@ -272,7 +272,8 @@
 
         const loading = document.getElementById('loading');
         const quizUrl = `${scriptURL}?action=getQuiz&set=${encodeURIComponent(problemSet)}&grade=${encodeURIComponent(selectedGrade)}&subject=${encodeURIComponent(selectedSubject)}&t=${Date.now()}`;
-        StudyData.get(quizUrl, {
+        const preloaded = takePreloadedQuiz();
+        const request = preloaded ? Promise.resolve(preloaded) : StudyData.get(quizUrl, {
             validate: data => data && Array.isArray(data.questions) &&
                 (!isWritingPractice() || (typeof data.passage === 'string' && data.passage.trim())),
             onWaiting: () => {
@@ -281,8 +282,8 @@
             onRetry: (nextAttempt, maxAttempts) => {
                 loading.innerText = `연결이 불안정해 문제를 다시 불러오는 중입니다... (${nextAttempt}/${maxAttempts})`;
             }
-        })
-        .then(data => {
+        });
+        request.then(data => {
             if(!data || !Array.isArray(data.questions)) {
                 throw new Error("Invalid quiz data");
             }
@@ -524,6 +525,18 @@
         return words ? words.length : 0;
     }
 
+    function takePreloadedQuiz() {
+        try {
+            const access = JSON.parse(sessionStorage.getItem('dsskyQuizAccess'));
+            const quiz = access.preloadedQuiz;
+            if (!quiz || access.learningMode !== 'quiz') return null;
+            delete access.preloadedQuiz;
+            sessionStorage.setItem('dsskyQuizAccess', JSON.stringify(access));
+            const age = Date.now() - access.createdAt;
+            return age >= 0 && age <= 120000 && Array.isArray(quiz.questions) && typeof quiz.passage === 'string' ? quiz : null;
+        } catch (_) { return null; }
+    }
+
     function hasValidQuizAccess() {
         try {
             const rawAccess = sessionStorage.getItem('dsskyQuizAccess');
@@ -534,6 +547,7 @@
             const isFresh = Date.now() - Number(access.createdAt || 0) <= expiresInMs;
 
             return isFresh
+                && (!access.learningMode || access.learningMode === 'quiz')
                 && access.problem === problemSet
                 && access.student === studentName
                 && access.grade === selectedGrade

@@ -13,7 +13,8 @@ export function sanitizeList(kind, input) {
             // Never copy passwords, student records, or unexpected upstream fields.
             return { grade: row.grade, subject: row.subject, set: row.set,
                 learningType: String(row.learningType || ''),
-                ...(row.supportsPassageStart === true ? { supportsPassageStart: true } : {}) };
+                ...(row.supportsPassageStart === true ? { supportsPassageStart: true } : {}),
+                ...(row.supportsQuizStart === true ? { supportsQuizStart: true } : {}) };
         });
     }
     let days;
@@ -139,7 +140,7 @@ export function createListHandler({ cache, waitUntil = () => {}, fetchImpl = fet
             return send(400, { error: 'Invalid list request' });
         }
         // Fixed endpoints and seven bounded keys: this cannot proxy arbitrary URLs or actions.
-        const key = `dssky-study-list-${kind === 'catalog' ? 'v2' : 'v1'}:${kind}:${subject}`;
+        const key = `dssky-study-list-${kind === 'catalog' ? 'v3' : 'v1'}:${kind}:${subject}`;
         try {
             const entry = await read(key, kind);
             if (entry) {
@@ -150,12 +151,16 @@ export function createListHandler({ cache, waitUntil = () => {}, fetchImpl = fet
                 res.setHeader('X-Study-List-Cache', stale ? 'STALE' : 'HIT');
                 return send(200, entry);
             }
-            if ((retryAfter.get(key) || 0) > now()) return send(503, { error: 'List temporarily unavailable' });
+            if ((retryAfter.get(key) || 0) > now()) {
+                res.setHeader('Retry-After', '30');
+                return send(503, { error: 'List temporarily unavailable' });
+            }
             const fresh = await refresh(key, kind, subject);
             res.setHeader('X-Study-List-Cache', 'MISS');
             return send(200, fresh);
         } catch (_) {
             // Do not expose upstream bodies, redirect tokens, or spreadsheet contents in errors.
+            if ((retryAfter.get(key) || 0) > now()) res.setHeader('Retry-After', '30');
             return send(503, { error: 'List temporarily unavailable' });
         }
     };
